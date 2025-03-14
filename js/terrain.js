@@ -22,8 +22,8 @@ function createEnvironment() {
       // 太陽光パネルを追加
       createSolarPanels();
       
-      // 浄水施設を追加
-      createWaterTreatmentFacility();
+      // 大規模浄水施設を追加
+      createLargeWaterTreatmentFacility();
 
       resolve();
     } catch (error) {
@@ -841,7 +841,523 @@ function createSingleSolarPanel() {
 }
 
 /**
- * 浄水施設を作成する
+ * 大規模浄水施設を作成する関数
+ * 参考画像に基づいた円形タンク群と処理施設を再現
+ */
+function createLargeWaterTreatmentFacility() {
+  console.log("大規模浄水施設の作成開始");
+  
+  // 浄水施設のグループ
+  const waterFacilityGroup = new THREE.Group();
+  scene.add(waterFacilityGroup);
+  
+  // 施設の配置位置（北東側） - 敷地内に収まるよう調整
+  const facilityPosition = { x: 150, z: -150 };
+  
+  // 浄水施設のベース（コンクリート基礎） - 細長く敷地内に収める
+  const baseGeometry = new THREE.BoxGeometry(220, 1, 180);
+  const baseMaterial = new THREE.MeshStandardMaterial({
+    color: 0xaaaaaa,
+    roughness: 0.9,
+    metalness: 0.1
+  });
+  
+  const base = new THREE.Mesh(baseGeometry, baseMaterial);
+  base.position.set(facilityPosition.x, 0.5, facilityPosition.z);
+  base.receiveShadow = true;
+  waterFacilityGroup.add(base);
+
+  // ============================================================
+  // 円形浄水タンク（参考画像に基づく緑色のものと白色のもの）
+  // ============================================================
+  
+  // 大型円形タンク（緑色のタンク）
+  const createGreenTank = (x, z, radius = 30, depth = 5) => {
+    const tankGroup = new THREE.Group();
+    
+    // 外側の壁
+    const wallGeometry = new THREE.CylinderGeometry(radius, radius, depth, 32);
+    const wallMaterial = new THREE.MeshStandardMaterial({
+      color: 0x004400,  // 深緑色
+      roughness: 0.6,
+      metalness: 0.3
+    });
+    
+    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+    wall.position.y = depth / 2;
+    wall.castShadow = true;
+    wall.receiveShadow = true;
+    tankGroup.add(wall);
+    
+    // 内側の水（水面の表現） - Z-fighting解消用に位置とサイズを調整
+    const waterGeometry = new THREE.CylinderGeometry(radius - 1.5, radius - 1.5, 0.1, 32);
+    const waterMaterial = new THREE.MeshStandardMaterial({
+      color: 0x004488,  // 暗い青色
+      roughness: 0.1,
+      metalness: 0.3,
+      transparent: true,
+      opacity: 0.8
+    });
+    
+    const water = new THREE.Mesh(waterGeometry, waterMaterial);
+    water.position.y = depth - 0.01;  // 底面との間隔を広げる
+    tankGroup.add(water);
+    
+    // 中央の回転機構（浄水器）
+    const centerPillarGeometry = new THREE.CylinderGeometry(2, 2, depth + 4, 16);
+    const centerPillarMaterial = new THREE.MeshStandardMaterial({
+      color: 0x555555,
+      roughness: 0.6,
+      metalness: 0.7
+    });
+    
+    const centerPillar = new THREE.Mesh(centerPillarGeometry, centerPillarMaterial);
+    centerPillar.position.y = depth / 2 + 2;
+    centerPillar.castShadow = true;
+    tankGroup.add(centerPillar);
+    
+    // 回転アーム
+    const armGeometry = new THREE.BoxGeometry(radius * 1.8, 0.8, 0.8);
+    const armMaterial = new THREE.MeshStandardMaterial({
+      color: 0x333333,
+      roughness: 0.7,
+      metalness: 0.5
+    });
+    
+    const arm = new THREE.Mesh(armGeometry, armMaterial);
+    arm.position.y = depth + 3;
+    arm.castShadow = true;
+    tankGroup.add(arm);
+    
+    // スイーパー部品を追加
+    for (let i = 0; i < 5; i++) {
+      const offset = (radius * 1.6) / 10;
+      const sweeper = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 3, 0.5),
+        armMaterial
+      );
+      sweeper.position.set(-radius * 0.8 + i * offset * 4, depth + 1.5, 0);
+      arm.add(sweeper);
+    }
+    
+    // タンクの位置を設定
+    tankGroup.position.set(x, 0, z);
+    waterFacilityGroup.add(tankGroup);
+    
+    return tankGroup;
+  };
+  
+  // 白い円形タンク（浄水処理槽）
+  const createWhiteTank = (x, z, radius = 25, depth = 5) => {
+    const tankGroup = new THREE.Group();
+    
+    // 外側の壁
+    const wallGeometry = new THREE.CylinderGeometry(radius, radius, depth, 32);
+    const wallMaterial = new THREE.MeshStandardMaterial({
+      color: 0xdddddd,  // 白色
+      roughness: 0.3,
+      metalness: 0.5
+    });
+    
+    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+    wall.position.y = depth / 2;
+    wall.castShadow = true;
+    wall.receiveShadow = true;
+    tankGroup.add(wall);
+    
+    // 内側の水（水面の表現） - Z-fighting解消用に位置とサイズを調整
+    const waterGeometry = new THREE.CylinderGeometry(radius - 1.5, radius - 1.5, 0.1, 32);
+    const waterMaterial = new THREE.MeshStandardMaterial({
+      color: 0x88ccff,  // 明るい青色（処理後のきれいな水）
+      roughness: 0.1,
+      metalness: 0.2,
+      transparent: true,
+      opacity: 0.7
+    });
+    
+    const water = new THREE.Mesh(waterGeometry, waterMaterial);
+    water.position.y = depth - 0.01;  // 底面との間隔を広げる
+    tankGroup.add(water);
+    
+    // タンクの位置を設定
+    tankGroup.position.set(x, 0, z);
+    waterFacilityGroup.add(tankGroup);
+    
+    return tankGroup;
+  };
+  
+  // 参考画像に基づいて円形タンクを配置
+  // 緑色タンク（最初の浄化槽） - 配置位置を調整
+  createGreenTank(facilityPosition.x - 75, facilityPosition.z - 60, 25, 5);
+  createGreenTank(facilityPosition.x, facilityPosition.z - 60, 25, 5);
+  createGreenTank(facilityPosition.x + 75, facilityPosition.z - 60, 25, 5);
+  
+  // 白色タンク（最終浄化槽） - 配置位置を調整
+  createWhiteTank(facilityPosition.x - 75, facilityPosition.z + 40, 22, 5);
+  createWhiteTank(facilityPosition.x, facilityPosition.z + 40, 22, 5);
+  createWhiteTank(facilityPosition.x + 75, facilityPosition.z + 40, 22, 5);
+  
+  // ============================================================
+  // 処理施設・制御建物
+  // ============================================================
+  
+  // 主制御棟 - 位置調整
+  const controlBuildingGeometry = new THREE.BoxGeometry(35, 15, 25);
+  const controlBuildingMaterial = new THREE.MeshStandardMaterial({
+    color: 0x0056b3,  // TerraGroupのブルー
+    roughness: 0.7,
+    metalness: 0.3
+  });
+  
+  const controlBuilding = new THREE.Mesh(controlBuildingGeometry, controlBuildingMaterial);
+  controlBuilding.position.set(facilityPosition.x + 75, 7.5, facilityPosition.z - 20);
+  controlBuilding.castShadow = true;
+  controlBuilding.receiveShadow = true;
+  waterFacilityGroup.add(controlBuilding);
+  
+  // 制御棟に窓を追加
+  addWindowsToBox(controlBuilding, 4, 2);
+  
+  // 小さな機械室 - 位置調整
+  const pumpHouseGeometry = new THREE.BoxGeometry(15, 8, 12);
+  const pumpHouseMaterial = new THREE.MeshStandardMaterial({
+    color: 0xcccccc,
+    roughness: 0.8,
+    metalness: 0.2
+  });
+  
+  const pumpHouse = new THREE.Mesh(pumpHouseGeometry, pumpHouseMaterial);
+  pumpHouse.position.set(facilityPosition.x + 60, 4, facilityPosition.z - 80);
+  pumpHouse.castShadow = true;
+  pumpHouse.receiveShadow = true;
+  waterFacilityGroup.add(pumpHouse);
+  
+  // ============================================================
+  // 接続パイプとインフラ
+  // ============================================================
+  
+  // パイプのマテリアル
+  const pipeMaterial = new THREE.MeshStandardMaterial({
+    color: 0x777777,
+    roughness: 0.4,
+    metalness: 0.7
+  });
+  
+  // 緑タンク同士を接続するパイプ - 位置調整
+  createPipe(
+    facilityPosition.x - 75, 2.5, facilityPosition.z - 60,
+    facilityPosition.x, 2.5, facilityPosition.z - 60,
+    1.2, pipeMaterial
+  );
+  
+  createPipe(
+    facilityPosition.x, 2.5, facilityPosition.z - 60,
+    facilityPosition.x + 75, 2.5, facilityPosition.z - 60,
+    1.2, pipeMaterial
+  );
+  
+  // 白タンク同士を接続するパイプ - 位置調整
+  createPipe(
+    facilityPosition.x - 75, 2.5, facilityPosition.z + 40,
+    facilityPosition.x, 2.5, facilityPosition.z + 40,
+    1.2, pipeMaterial
+  );
+  
+  createPipe(
+    facilityPosition.x, 2.5, facilityPosition.z + 40,
+    facilityPosition.x + 75, 2.5, facilityPosition.z + 40,
+    1.2, pipeMaterial
+  );
+  
+  // 緑タンクから白タンクへの接続パイプ - 位置調整
+  createPipe(
+    facilityPosition.x - 75, 2.5, facilityPosition.z - 60,
+    facilityPosition.x - 75, 2.5, facilityPosition.z + 40,
+    1.2, pipeMaterial
+  );
+  
+  createPipe(
+    facilityPosition.x, 2.5, facilityPosition.z - 60,
+    facilityPosition.x, 2.5, facilityPosition.z + 40,
+    1.2, pipeMaterial
+  );
+  
+  createPipe(
+    facilityPosition.x + 75, 2.5, facilityPosition.z - 60,
+    facilityPosition.x + 75, 2.5, facilityPosition.z + 40,
+    1.2, pipeMaterial
+  );
+  
+  // 制御棟と処理タンクを接続するパイプ - 位置調整
+  createPipe(
+    facilityPosition.x + 75, 2.5, facilityPosition.z - 60,
+    facilityPosition.x + 75, 2.5, facilityPosition.z - 20,
+    1.2, pipeMaterial
+  );
+  
+  // ============================================================
+  // 装飾要素（ベント、バルブ、梯子など）
+  // ============================================================
+  
+  // タンク間の制御バルブを追加 - 位置調整
+  addValve(facilityPosition.x - 37.5, 2.5, facilityPosition.z - 60);
+  addValve(facilityPosition.x + 37.5, 2.5, facilityPosition.z - 60);
+  addValve(facilityPosition.x - 37.5, 2.5, facilityPosition.z + 40);
+  addValve(facilityPosition.x + 37.5, 2.5, facilityPosition.z + 40);
+  
+  // 各タンクへのアクセス梯子 - 位置調整
+  addLadder(facilityPosition.x - 75, facilityPosition.z - 85, 5, 0);
+  addLadder(facilityPosition.x, facilityPosition.z - 85, 5, 0);
+  addLadder(facilityPosition.x + 75, facilityPosition.z - 85, 5, 0);
+  addLadder(facilityPosition.x - 75, facilityPosition.z + 15, 5, Math.PI);
+  addLadder(facilityPosition.x, facilityPosition.z + 15, 5, Math.PI);
+  addLadder(facilityPosition.x + 75, facilityPosition.z + 15, 5, Math.PI);
+  
+  // 制御棟の屋上設備（ベントパイプとアンテナ） - 位置調整
+  addRoofEquipment(facilityPosition.x + 75, 15, facilityPosition.z - 20);
+  
+  // ============================================================
+  // 周囲のフェンスとセキュリティ要素
+  // ============================================================
+  
+  // 浄水施設の周囲にフェンスを設置 - サイズ調整
+  createFacilityFence(facilityPosition.x, facilityPosition.z, 210, 170);
+  
+  // セキュリティカメラを設置 - 敷地内に収まるよう位置調整
+  const camera1 = createSecurityCamera(
+    facilityPosition.x - 90, 
+    facilityPosition.z - 80
+  );
+  camera1.lookAt(facilityPosition.x, 10, facilityPosition.z);
+  
+  const camera2 = createSecurityCamera(
+    facilityPosition.x + 90, 
+    facilityPosition.z + 80
+  );
+  camera2.lookAt(facilityPosition.x, 10, facilityPosition.z);
+  
+  // 施設名の看板 - 敷地内に収まるよう位置調整
+  const signGeometry = new THREE.BoxGeometry(25, 5, 0.5);
+  const signMaterial = new THREE.MeshStandardMaterial({
+    color: 0x0056b3,
+    roughness: 0.5,
+    metalness: 0.3
+  });
+  
+  const sign = new THREE.Mesh(signGeometry, signMaterial);
+  sign.position.set(facilityPosition.x, 3, facilityPosition.z + 80);
+  sign.castShadow = true;
+  waterFacilityGroup.add(sign);
+  
+  // TerraGroup のロゴ風デザイン
+  const logoGeometry = new THREE.BoxGeometry(8, 3, 0.6);
+  const logoMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.4,
+    metalness: 0.6,
+    emissive: 0xffffff,
+    emissiveIntensity: 0.2
+  });
+  
+  const logo = new THREE.Mesh(logoGeometry, logoMaterial);
+  logo.position.z = 0.1;
+  sign.add(logo);
+  
+  console.log("大規模浄水施設の作成完了");
+  return waterFacilityGroup;
+}
+
+/**
+ * 2点間を接続するパイプを作成
+ */
+function createPipe(x1, y1, z1, x2, y2, z2, radius, material) {
+  // 2点間の距離と中間点を計算
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const dz = z2 - z1;
+  
+  const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+  const midX = (x1 + x2) / 2;
+  const midY = (y1 + y2) / 2;
+  const midZ = (z1 + z2) / 2;
+  
+  // パイプのジオメトリ（円柱）
+  const pipeGeometry = new THREE.CylinderGeometry(radius, radius, distance, 8);
+  const pipe = new THREE.Mesh(pipeGeometry, material);
+  
+  // パイプを2点間に配置
+  pipe.position.set(midX, midY, midZ);
+  
+  // パイプを2点間を結ぶ方向に回転
+  pipe.lookAt(x2, y2, z2);
+  pipe.rotateX(Math.PI / 2);
+  
+  pipe.castShadow = true;
+  scene.add(pipe);
+  
+  return pipe;
+}
+
+/**
+ * バルブを追加
+ */
+function addValve(x, y, z) {
+  const valveGroup = new THREE.Group();
+  valveGroup.position.set(x, y, z);
+  
+  // バルブ本体
+  const valveBodyGeometry = new THREE.CylinderGeometry(2, 2, 3, 16);
+  const valveBodyMaterial = new THREE.MeshStandardMaterial({
+    color: 0x333333,
+    roughness: 0.3,
+    metalness: 0.8
+  });
+  
+  const valveBody = new THREE.Mesh(valveBodyGeometry, valveBodyMaterial);
+  valveBody.rotation.x = Math.PI / 2;
+  valveBody.castShadow = true;
+  valveGroup.add(valveBody);
+  
+  // バルブのハンドル
+  const handleGeometry = new THREE.TorusGeometry(1.5, 0.3, 8, 16);
+  const handleMaterial = new THREE.MeshStandardMaterial({
+    color: 0xff0000,
+    roughness: 0.6,
+    metalness: 0.4
+  });
+  
+  const handle = new THREE.Mesh(handleGeometry, handleMaterial);
+  handle.position.y = 2;
+  handle.castShadow = true;
+  valveGroup.add(handle);
+  
+  // バルブのステム
+  const stemGeometry = new THREE.CylinderGeometry(0.3, 0.3, 2, 8);
+  const stem = new THREE.Mesh(stemGeometry, valveBodyMaterial);
+  stem.position.y = 1;
+  stem.castShadow = true;
+  valveGroup.add(stem);
+  
+  scene.add(valveGroup);
+  return valveGroup;
+}
+
+/**
+ * アクセス用の梯子を追加
+ */
+function addLadder(x, z, height, rotation = 0) {
+  const ladderGroup = new THREE.Group();
+  ladderGroup.position.set(x, 0, z);
+  ladderGroup.rotation.y = rotation;
+  
+  const ladderMaterial = new THREE.MeshStandardMaterial({
+    color: 0x777777,
+    roughness: 0.7,
+    metalness: 0.3
+  });
+  
+  // 梯子の側面
+  const sideGeometry = new THREE.BoxGeometry(0.3, height, 0.3);
+  
+  const leftSide = new THREE.Mesh(sideGeometry, ladderMaterial);
+  leftSide.position.set(-1, height / 2, 0);
+  ladderGroup.add(leftSide);
+  
+  const rightSide = new THREE.Mesh(sideGeometry, ladderMaterial);
+  rightSide.position.set(1, height / 2, 0);
+  ladderGroup.add(rightSide);
+  
+  // 梯子の段
+  const stepCount = Math.floor(height / 0.5);
+  const stepGeometry = new THREE.BoxGeometry(2.3, 0.2, 0.3);
+  
+  for (let i = 0; i < stepCount; i++) {
+    const step = new THREE.Mesh(stepGeometry, ladderMaterial);
+    step.position.set(0, i * 0.5 + 0.3, 0);
+    ladderGroup.add(step);
+  }
+  
+  scene.add(ladderGroup);
+  return ladderGroup;
+}
+
+/**
+ * 制御棟屋上の設備を追加
+ */
+function addRoofEquipment(x, y, z) {
+  const equipmentGroup = new THREE.Group();
+  equipmentGroup.position.set(x, y, z);
+  
+  // 排気ベント1
+  const vent1Geometry = new THREE.CylinderGeometry(1, 1.5, 3, 8);
+  const ventMaterial = new THREE.MeshStandardMaterial({
+    color: 0x555555,
+    roughness: 0.6,
+    metalness: 0.4
+  });
+  
+  const vent1 = new THREE.Mesh(vent1Geometry, ventMaterial);
+  vent1.position.set(-10, 1.5, -5);
+  vent1.castShadow = true;
+  equipmentGroup.add(vent1);
+  
+  // 排気ベント2
+  const vent2 = vent1.clone();
+  vent2.position.set(-10, 1.5, 5);
+  equipmentGroup.add(vent2);
+  
+  // アンテナ
+  const antennaPoleGeometry = new THREE.CylinderGeometry(0.3, 0.3, 8, 8);
+  const antennaMaterial = new THREE.MeshStandardMaterial({
+    color: 0x333333,
+    roughness: 0.3,
+    metalness: 0.8
+  });
+  
+  const antennaPole = new THREE.Mesh(antennaPoleGeometry, antennaMaterial);
+  antennaPole.position.set(10, 4, 0);
+  antennaPole.castShadow = true;
+  equipmentGroup.add(antennaPole);
+  
+  // アンテナの受信部
+  const antennaTopGeometry = new THREE.CylinderGeometry(0.1, 2, 4, 3);
+  const antennaTop = new THREE.Mesh(antennaTopGeometry, antennaMaterial);
+  antennaTop.position.set(0, 4, 0);
+  antennaTop.rotation.x = Math.PI / 2;
+  antennaPole.add(antennaTop);
+  
+  // 小さいボックス（空調ユニットなど）
+  const acUnitGeometry = new THREE.BoxGeometry(5, 2, 4);
+  const acUnitMaterial = new THREE.MeshStandardMaterial({
+    color: 0x999999,
+    roughness: 0.7,
+    metalness: 0.3
+  });
+  
+  const acUnit = new THREE.Mesh(acUnitGeometry, acUnitMaterial);
+  acUnit.position.set(0, 1, 0);
+  acUnit.castShadow = true;
+  equipmentGroup.add(acUnit);
+  
+  // ファン
+  const fanGeometry = new THREE.CylinderGeometry(1, 1, 0.5, 8);
+  const fanMaterial = new THREE.MeshStandardMaterial({
+    color: 0x333333,
+    roughness: 0.5,
+    metalness: 0.5
+  });
+  
+  const fan = new THREE.Mesh(fanGeometry, fanMaterial);
+  fan.position.set(0, 0.5, 0);
+  fan.rotation.x = Math.PI / 2;
+  acUnit.add(fan);
+  
+  scene.add(equipmentGroup);
+  return equipmentGroup;
+}
+
+/**
+ * 浄水施設を作成する（シンプルなバージョン - 新版に置き換えられます）
  */
 function createWaterTreatmentFacility() {
   // 浄水施設のグループ
@@ -998,6 +1514,7 @@ function createWaterTreatmentFacility() {
   waterFacilityGroup.add(sign);
   
   console.log("浄水施設作成完了");
+  return waterFacilityGroup;
 }
 
 /**
