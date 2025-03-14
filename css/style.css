@@ -1,0 +1,294 @@
+/* TerraGroup Labs PV スタイルシート
+   青・白・黒のカラーテーマに統一 */
+
+:root {
+    /* TerraGroupのテーマカラー */
+    --terra-primary: #0056B3;    /* メインカラー（青） */
+    --terra-secondary: #FFFFFF;  /* サブカラー（白） */
+    --terra-accent: #222222;     /* アクセントカラー（黒） */
+    --terra-blue-light: #4D8CC8; /* 薄い青 */
+    --terra-blue-dark: #003C7D;  /* 濃い青 */
+    --terra-bg-dark: rgba(0, 30, 55, 0.9); /* 背景色（暗め） */
+    --terra-bg-light: rgba(240, 245, 255, 0.9); /* 背景色（明るめ） */
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    overflow: hidden;
+    font-family: 'Arial', sans-serif;
+    background-color: #000;
+    color: var(--terra-secondary);
+}
+
+#scene-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* ===== ローディング画面 ===== */
+.loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--terra-bg-dark);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    transition: opacity 1.5s ease-in-out;
+}
+
+.loader {
+    width: 80px;
+    height: 80px;
+    border: 6px solid rgba(255, 255, 255, 0.1);
+    border-top: 6px solid var(--terra-primary);
+    border-radius: 50%;
+    animation: spin 1.5s linear infinite;
+    margin-bottom: 30px;
+    box-shadow: 0 0 20px rgba(0, 86, 179, 0.5);
+}
+
+.loading-text {
+    font-size: 1.4rem;
+    color: var(--terra-secondary);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(0, 86, 179, 0.8);
+    animation: pulse 2s infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* ===== 情報パネル ===== */
+.info-panel {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    background-color: var(--terra-bg-dark);
+    border: 2px solid var(--terra-primary);
+    border-radius: 8px;
+    padding: 15px 20px;
+    z-index: 10;
+    max-width: 350px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 15px rgba(0, 86, 179, 0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.info-panel:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(0, 86, 179, 0.5);
+}
+
+.info-panel h1 {
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+    color: var(--terra-blue-light);
+    border-bottom: 2px solid var(--terra-blue-light);
+    padding-bottom: 8px;
+    letter-spacing: 1px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.info-content {
+    padding: 5px 0;
+}
+
+.info-panel p {
+    margin: 8px 0;
+    font-size: 1rem;
+    color: var(--terra-secondary);
+    line-height: 1.4;
+}
+
+.info-panel span {
+    color: var(--terra-blue-light);
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+/* ===== コントロールヒント ===== */
+.controls-hint {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: var(--terra-bg-dark);
+    border: 2px solid var(--terra-primary);
+    border-radius: 8px;
+    padding: 12px 18px;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 15px rgba(0, 86, 179, 0.3);
+    transition: transform 0.3s ease;
+}
+
+.controls-hint:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 20px rgba(0, 86, 179, 0.5);
+}
+
+.controls-hint p {
+    margin: 6px 0;
+    font-size: 0.95rem;
+    color: var(--terra-secondary);
+    letter-spacing: 0.5px;
+}
+
+.controls-hint p span {
+    display: inline-block;
+    background-color: var(--terra-blue-dark);
+    color: var(--terra-secondary);
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin: 0 4px;
+    font-family: monospace;
+    font-weight: bold;
+}
+
+/* ===== TerraGroupのロゴスタイル ===== */
+.terra-logo {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.logo-image {
+    width: 80px;
+    height: 80px;
+    background-color: var(--terra-primary);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--terra-secondary);
+    font-size: 2.5rem;
+    font-weight: bold;
+    box-shadow: 0 0 20px rgba(0, 86, 179, 0.6);
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+    animation: glow 4s infinite alternate;
+}
+
+.logo-text {
+    margin-top: 10px;
+    color: var(--terra-secondary);
+    font-size: 0.9rem;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    text-shadow: 0 0 10px rgba(0, 86, 179, 0.8);
+}
+
+@keyframes glow {
+    0% { box-shadow: 0 0 10px rgba(0, 86, 179, 0.5); }
+    100% { box-shadow: 0 0 30px rgba(0, 86, 179, 0.9); }
+}
+
+/* スクリーン状態メッセージ */
+.status-message {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--terra-bg-dark);
+    border: 2px solid var(--terra-primary);
+    border-radius: 8px;
+    padding: 15px 25px;
+    color: var(--terra-secondary);
+    font-size: 1.2rem;
+    text-align: center;
+    z-index: 20;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    pointer-events: none;
+    max-width: 80%;
+}
+
+.status-message.visible {
+    opacity: 1;
+}
+
+/* ===== UI表示切替用クラス ===== */
+.ui-hidden .info-panel,
+.ui-hidden .controls-hint,
+.ui-hidden .terra-logo {
+    visibility: hidden;
+    opacity: 0;
+    transition: visibility 0.5s, opacity 0.5s ease-out;
+}
+
+.ui-visible .info-panel,
+.ui-visible .controls-hint,
+.ui-visible .terra-logo {
+    visibility: visible;
+    opacity: 1;
+    transition: visibility 0.5s, opacity 0.5s ease-in;
+}
+
+/* ===== レスポンシブ対応 ===== */
+@media (max-width: 768px) {
+    .info-panel {
+        max-width: 300px;
+        padding: 12px 15px;
+    }
+    
+    .info-panel h1 {
+        font-size: 1.5rem;
+    }
+    
+    .controls-hint {
+        padding: 10px 12px;
+    }
+    
+    .controls-hint p {
+        font-size: 0.85rem;
+    }
+    
+    .logo-image {
+        width: 60px;
+        height: 60px;
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .info-panel {
+        transform: scale(0.85);
+        transform-origin: top left;
+    }
+    
+    .controls-hint {
+        transform: scale(0.85);
+        transform-origin: bottom right;
+    }
+    
+    .loading-text {
+        font-size: 1.2rem;
+    }
+}

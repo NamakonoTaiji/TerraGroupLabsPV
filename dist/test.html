@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TerraGroup Labs - テストシーン</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      #loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 30, 55, 0.95);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        color: white;
+        transition: opacity 1s;
+      }
+      .loader {
+        width: 60px;
+        height: 60px;
+        border: 5px solid rgba(255, 255, 255, 0.3);
+        border-top: 5px solid #0056b3;
+        border-radius: 50%;
+        animation: spin 1.5s linear infinite;
+        margin-bottom: 20px;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+    <!-- Three.jsの読み込み - defer属性を追加 -->
+    <!-- 代替CDN -->
+    <script src="https://unpkg.com/three@0.149.0/build/three.min.js"></script>
+  </head>
+  <body>
+    <div id="loading">
+      <div class="loader"></div>
+      <div>TerraGroup Labs 研究施設データ読み込み中...</div>
+    </div>
+
+    <!-- メインスクリプトを別ファイルに分離し、Three.js読み込み後に実行されるよう設定 -->
+    <script>
+      // Three.jsが読み込まれるのを待ってから初期化
+      window.addEventListener("load", function () {
+        if (typeof THREE === "undefined") {
+          console.error("THREE is not defined, trying to reload the library");
+          // ライブラリを再読み込み
+          const script = document.createElement("script");
+          script.src =
+            "https://cdnjs.cloudflare.com/ajax/libs/three.js/r149/three.min.js";
+          script.onload = function () {
+            console.log("THREE successfully loaded, starting initialization");
+            init();
+          };
+          document.head.appendChild(script);
+        } else {
+          console.log("THREE is already defined, starting initialization");
+          init();
+        }
+      });
+
+      // グローバル変数
+      let scene, camera, renderer, cube;
+
+      // 初期化関数
+      function init() {
+        try {
+          console.log("Initialization started");
+
+          // シーンの作成
+          scene = new THREE.Scene();
+          scene.background = new THREE.Color(0x87ceeb);
+
+          // カメラの設定
+          camera = new THREE.PerspectiveCamera(
+            75,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+          );
+          camera.position.z = 5;
+
+          // レンダラーの作成
+          renderer = new THREE.WebGLRenderer();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          document.body.appendChild(renderer.domElement);
+
+          // キューブの作成
+          const geometry = new THREE.BoxGeometry();
+          const material = new THREE.MeshBasicMaterial({ color: 0x0056b3 });
+          cube = new THREE.Mesh(geometry, material);
+          scene.add(cube);
+
+          // ウィンドウリサイズ時の処理
+          window.addEventListener("resize", () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+          });
+
+          // ローディング画面を非表示
+          setTimeout(() => {
+            document.getElementById("loading").style.opacity = 0;
+            setTimeout(() => {
+              document.getElementById("loading").style.display = "none";
+            }, 1000);
+          }, 1000);
+
+          // アニメーション開始
+          animate();
+          console.log("Initialization completed");
+        } catch (error) {
+          console.error("Initialization error:", error);
+          alert("初期化エラー: " + error.message);
+        }
+      }
+
+      // アニメーション関数
+      function animate() {
+        requestAnimationFrame(animate);
+
+        if (cube) {
+          cube.rotation.x += 0.01;
+          cube.rotation.y += 0.01;
+        }
+
+        if (renderer && scene && camera) {
+          renderer.render(scene, camera);
+        }
+      }
+    </script>
+  </body>
+</html>
