@@ -1,0 +1,1535 @@
+// terrain.js - TerraGroup遐皮ｩｶ譁ｽ險ｭ縺ｮ蝨ｰ蠖｢繝ｻ迺ｰ蠅・函謌・// 菫ｮ豁｣迚茨ｼ壽涎縺ｮ縺ｿ蠕ｩ豢ｻ
+
+/**
+ * 迺ｰ蠅・ｼ亥慍蠖｢縲∫ｩｺ縲∵ｰｴ縺ｪ縺ｩ・峨ｒ菴懈・縺吶ｋ
+ */
+function createEnvironment() {
+  return new Promise((resolve, reject) => {
+    try {
+      // 蝨ｰ蠖｢縺ｮ菴懈・
+      createTerrain();
+
+      // 遨ｺ縺ｨ螟ｪ髯ｽ縺ｮ菴懈・
+      createSkyAndSun();
+
+      // 譽ｮ譫励・菴懈・
+      createForest();
+
+      // 譟ｵ繧貞ｾｩ豢ｻ
+      createPerimeterFence();
+      
+      // 螟ｪ髯ｽ蜈峨ヱ繝阪Ν繧定ｿｽ蜉
+      createSolarPanels();
+      
+      // 螟ｧ隕乗ｨ｡豬・ｰｴ譁ｽ險ｭ繧定ｿｽ蜉
+      createLargeWaterTreatmentFacility();
+      
+      // 繝倥Μ繝昴・繝医ｒ霑ｽ蜉
+      createHeliport();
+      
+      // 遐皮ｩｶ螳滄ｨ薙お繝ｪ繧｢繧定ｿｽ蜉
+      createResearchArea();
+      
+      // 鬧占ｻ雁ｴ繧定ｿｽ蜉
+      createParkingLot();
+      
+      // 蛟牙ｺｫ譁ｽ險ｭ繧定ｿｽ蜉
+      createWarehouse();
+      
+      // 騾壻ｿ｡繧｢繝ｳ繝・リ蝪斐ｒ霑ｽ蜉
+      createCommunicationTower();
+
+      resolve();
+    } catch (error) {
+      console.error("迺ｰ蠅・ｽ懈・繧ｨ繝ｩ繝ｼ:", error);
+      reject(error);
+    }
+  });
+}
+
+/**
+ * 蝨ｰ蠖｢・亥慍髱｢・峨ｒ菴懈・縺吶ｋ
+ */
+function createTerrain() {
+  // 螟ｧ蝨ｰ縺ｮ繧ｵ繧､繧ｺ繧呈僑螟ｧ・・000x4000・・  const groundGeometry = new THREE.PlaneGeometry(6000, 6000, 120, 120);
+
+  // 闕牙慍繝・け繧ｹ繝√Ε縺ｮ菴懈・
+  function getTerrainMaterial() {
+    return new THREE.MeshStandardMaterial({
+      color: 0x558833,
+      roughness: 0.8,
+      metalness: 0.1,
+    });
+  }
+
+  const ground = new THREE.Mesh(groundGeometry, getTerrainMaterial());
+  ground.rotation.x = -Math.PI / 2; // 豌ｴ蟷ｳ縺ｫ驟咲ｽｮ
+  ground.receiveShadow = true;
+  ground.position.y = 0; // 蝨ｰ髱｢縺ｮ蝓ｺ貅紋ｽ咲ｽｮ
+  scene.add(ground);
+
+  // 蝨ｰ蠖｢縺ｮ襍ｷ莨上ｒ菴懊ｋ・磯らせ繧貞ｰ代＠繝ｩ繝ｳ繝繝縺ｫ蜍輔°縺呻ｼ・  for (let i = 0; i < groundGeometry.attributes.position.count; i++) {
+    // 荳ｭ蠢・°繧芽ｷ晞屬繧定ｨ育ｮ・    const x = groundGeometry.attributes.position.getX(i);
+    const z = groundGeometry.attributes.position.getZ(i);
+    const distFromCenter = Math.sqrt(x * x + z * z);
+
+    // 荳ｭ蠢・ｻ倩ｿ代・蟷ｳ蝮ｦ縺ｫ縲∝捉蝗ｲ縺ｯ襍ｷ莨上ｒ縺､縺代ｋ
+    if (distFromCenter > 5000) {
+      const noise = (Math.sin(x * 0.02) + Math.cos(z * 0.02)) * 5;
+      const noise2 = Math.cos(x * 0.05) * Math.sin(z * 0.03) * 3;
+      const height = noise + noise2;
+      groundGeometry.attributes.position.setY(i, height);
+    }
+  }
+
+  // 繝舌ャ繝輔ぃ繧呈峩譁ｰ
+  groundGeometry.computeVertexNormals();
+  groundGeometry.attributes.position.needsUpdate = true;
+
+  // 譁ｽ險ｭ縺ｮ蝓ｺ遉朱Κ蛻・ｼ育區縺・・繝ｩ繝・ヨ繝輔か繝ｼ繝・・ Z-fighting繧帝亟縺舌◆繧∝ｰ代＠荳翫↓驟咲ｽｮ
+  const platformSize = 600; // 繧医ｊ螟ｧ縺阪↑繝励Λ繝・ヨ繝輔か繝ｼ繝
+  const platformGeometry = new THREE.BoxGeometry(platformSize, 1, platformSize);
+  const platformMaterial = new THREE.MeshStandardMaterial({
+    color: 0xf5f5f5,
+    roughness: 0.6,
+    metalness: 0.1,
+  });
+
+  const platform = new THREE.Mesh(platformGeometry, platformMaterial);
+  platform.position.set(0, 0.2, 0); // 蠎翫ｒ蝨ｰ髱｢繧医ｊ蟆代＠荳翫↓
+  platform.receiveShadow = true;
+  platform.castShadow = false;
+  scene.add(platform);
+
+  // 蜻ｨ蝗ｲ縺ｮ螻ｱ縲・ｼ医ｈ繧願・辟ｶ縺ｪ蠖｢迥ｶ・峨ｒ縺輔ｉ縺ｫ驕縺上↓驟咲ｽｮ
+  const mountainPositions = [
+    { x: 2500, z: 1000, scale: 1.8 },
+    { x: 2200, z: -1400, scale: 1.4 },
+    { x: 1200, z: 2600, scale: 1.6 },
+    { x: -2000, z: 2400, scale: 2.0 },
+    { x: -2600, z: 0, scale: 1.9 },
+    { x: -2200, z: -2200, scale: 1.5 },
+    { x: 0, z: -2600, scale: 1.7 },
+    { x: 1800, z: -2200, scale: 1.3 },
+  ];
+
+  mountainPositions.forEach((pos) => {
+    createMountain(pos.x, pos.z, pos.scale);
+  });
+
+  console.log("蝨ｰ蠖｢菴懈・螳御ｺ・);
+}
+
+/**
+ * 螻ｱ繧剃ｽ懈・縺吶ｋ
+ */
+function createMountain(x, z, scale) {
+  // 繧医ｊ繝ｩ繝ｳ繝繝縺ｪ蠖｢迥ｶ縺ｮ螻ｱ
+  const segments = 24;
+  const mountainGeometry = new THREE.ConeGeometry(150, 300, segments);
+  const mountainMaterial = new THREE.MeshStandardMaterial({
+    color: 0x555566,
+    roughness: 0.9,
+    metalness: 0.1,
+  });
+
+  // 鬆らせ繧偵Λ繝ｳ繝繝縺ｫ蜍輔°縺励※閾ｪ辟ｶ縺ｪ螻ｱ縺ｫ
+  for (let i = 0; i < mountainGeometry.attributes.position.count; i++) {
+    const vx = mountainGeometry.attributes.position.getX(i);
+    const vy = mountainGeometry.attributes.position.getY(i);
+    const vz = mountainGeometry.attributes.position.getZ(i);
+
+    // 鬆らせ縺ｮY蠎ｧ讓吶′鬮倥＞縺ｻ縺ｩ螟牙ｽ｢繧貞ｰ代↑縺・    const yFactor = 1 - (vy + 150) / 300;
+
+    if (vy < 150) {
+      // 螻ｱ鬆ゆｻ倩ｿ代・螟牙ｽ｢縺励↑縺・      const noise = Math.sin(vx * 0.1) * Math.cos(vz * 0.1) * 15 * yFactor;
+      mountainGeometry.attributes.position.setX(i, vx + noise);
+      mountainGeometry.attributes.position.setZ(i, vz + noise);
+    }
+  }
+
+  mountainGeometry.computeVertexNormals();
+  mountainGeometry.attributes.position.needsUpdate = true;
+
+  const mountain = new THREE.Mesh(mountainGeometry, mountainMaterial);
+  mountain.position.set(x, 0, z);
+  mountain.scale.set(scale, scale, scale);
+  mountain.rotation.y = Math.random() * Math.PI * 2;
+
+  mountain.castShadow = true;
+  mountain.receiveShadow = true;
+  scene.add(mountain);
+}
+
+/**
+ * 遨ｺ縺ｨ螟ｪ髯ｽ繧剃ｽ懈・縺吶ｋ
+ */
+function createSkyAndSun() {
+  // 遨ｺ縺ｮ繧ｻ繝・ヨ繧｢繝・・
+  sky = new THREE.Sky();
+  sky.scale.setScalar(4000); // 螟ｧ蝨ｰ縺ｫ蜷医ｏ縺帙※遨ｺ繧よ僑螟ｧ
+  scene.add(sky);
+
+  // 螟ｪ髯ｽ縺ｮ菴咲ｽｮ繝代Λ繝｡繝ｼ繧ｿ
+  const sunPosition = new THREE.Vector3();
+  const sunElevation = 35; // 鬮伜ｺｦ・亥ｺｦ・・  const sunAzimuth = -160; // 譁ｹ菴崎ｧ抵ｼ亥ｺｦ・・
+  // 螟ｪ髯ｽ縺ｮ菴咲ｽｮ繧呈･ｵ蠎ｧ讓吶°繧芽ｨｭ螳・  const phi = THREE.MathUtils.degToRad(90 - sunElevation);
+  const theta = THREE.MathUtils.degToRad(sunAzimuth);
+
+  sunPosition.setFromSphericalCoords(1, phi, theta);
+
+  // 遨ｺ縺ｮ蜉ｹ譫懊ｒ險ｭ螳・  const uniforms = sky.material.uniforms;
+  uniforms["sunPosition"].value.copy(sunPosition);
+  uniforms["turbidity"].value = 8; // 豼√ｊ
+  uniforms["rayleigh"].value = 1.5; // 繝ｬ繧､繝ｪ繝ｼ謨｣荵ｱ
+  uniforms["mieCoefficient"].value = 0.005; // 繝溘・謨｣荵ｱ菫よ焚
+  uniforms["mieDirectionalG"].value = 0.8; // 繝溘・謖・髄諤ｧ
+
+  // 邱壼ｽ｢繝輔か繧ｰ・磯悸・・ 霍晞屬諢溘ｒ蜃ｺ縺・  scene.fog = new THREE.FogExp2(0xccddff, 0.0005); // 繝輔か繧ｰ繧定埋縺上＠縺ｦ驕縺上∪縺ｧ隕九∴繧九ｈ縺・↓
+
+  console.log("遨ｺ縺ｨ螟ｪ髯ｽ菴懈・螳御ｺ・);
+}
+
+/**
+ * 譛ｨ縲・・譽ｮ繧剃ｽ懈・縺吶ｋ
+ */
+function createForest() {
+  // 譛ｨ縺ｮ繝舌Μ繧ｨ繝ｼ繧ｷ繝ｧ繝ｳ
+  const treeTypes = [
+    createPineTree, // 驥晁痩讓ｹ
+    createOakTree, // 蠎・痩讓ｹ
+    createBushTree, // 菴取惠
+  ];
+
+  // 譁ｽ險ｭ蜻ｨ霎ｺ縺ｫ譛ｨ縲・ｒ驟咲ｽｮ・域賜髯､繧ｾ繝ｼ繝ｳ螟厄ｼ・  const treeCount = 800; // 譛ｨ縺ｮ邱乗焚繧貞｢怜刈
+  const exclusionRadius = 450; // 蟒ｺ迚ｩ蜻ｨ霎ｺ縺ｮ譛ｨ繧堤ｽｮ縺九↑縺・濠蠕・  const forestRadius = 3000; // 譽ｮ譫怜濠蠕・ｒ諡｡螟ｧ
+
+  // 譛ｨ縺ｮ繧ｰ繝ｫ繝ｼ繝暦ｼ亥酔縺倡ｨｮ鬘槭・譛ｨ繧偵ヰ繝・メ蜃ｦ逅・☆繧九◆繧・ｼ・  const treeGroups = treeTypes.map(() => new THREE.Group());
+  treeGroups.forEach((group) => scene.add(group));
+
+  // 譛ｨ縲・ｒ繝ｩ繝ｳ繝繝縺ｫ驟咲ｽｮ
+  for (let i = 0; i < treeCount; i++) {
+    // 繝ｩ繝ｳ繝繝縺ｪ菴咲ｽｮ・域･ｵ蠎ｧ讓吶〒・・    const angle = Math.random() * Math.PI * 2;
+    // 謗帝勁繧ｾ繝ｼ繝ｳ縺ｮ螟門・縺九ｉforestRadius縺ｾ縺ｧ縺ｮ遽・峇
+    const radius =
+      exclusionRadius + Math.random() * (forestRadius - exclusionRadius);
+
+    const x = Math.cos(angle) * radius;
+    const z = Math.sin(angle) * radius;
+
+    // 蝨ｰ蠖｢縺ｮ鬮倥＆縺ｫ蜷医ｏ縺帙ｋ・育ｰ｡譏鍋噪・・    let y = 0;
+    // 荳ｭ蠢・°繧蛾屬繧後ｋ縺ｻ縺ｩ蝨ｰ蠖｢縺悟ｰ代＠鬮倥￥縺ｪ繧・    if (radius > 200) {
+      const distFactor = (radius - 200) / 1800;
+      const noise = (Math.sin(x * 0.02) + Math.cos(z * 0.02)) * 5;
+      y = noise * distFactor;
+    }
+
+    // 繝ｩ繝ｳ繝繝縺ｫ譛ｨ縺ｮ繧ｿ繧､繝励ｒ驕ｸ謚・    const treeTypeIndex = Math.floor(Math.random() * treeTypes.length);
+    const treeCreateFunc = treeTypes[treeTypeIndex];
+
+    // 譛ｨ繧剃ｽ懈・縺励√げ繝ｫ繝ｼ繝励↓霑ｽ蜉
+    const tree = treeCreateFunc();
+
+    // 繧ｹ繧ｱ繝ｼ繝ｫ繧偵Λ繝ｳ繝繝蛹悶＠縺ｦ螟牙喧繧貞・縺・    const scale = 0.8 + Math.random() * 0.4;
+    tree.scale.set(scale, scale, scale);
+
+    // 蟆代＠縺縺代Λ繝ｳ繝繝縺ｫ蝗櫁ｻ｢
+    tree.rotation.y = Math.random() * Math.PI * 2;
+
+    // 菴咲ｽｮ險ｭ螳・    tree.position.set(x, y, z);
+
+    // 蟇ｾ蠢懊☆繧九げ繝ｫ繝ｼ繝励↓霑ｽ蜉
+    treeGroups[treeTypeIndex].add(tree);
+  }
+
+  console.log("譽ｮ譫嶺ｽ懈・螳御ｺ・);
+}
+
+/**
+ * 驥晁痩讓ｹ繧剃ｽ懈・縺吶ｋ
+ */
+function createPineTree() {
+  const tree = new THREE.Group();
+
+  // 蟷ｹ
+  const trunkGeometry = new THREE.CylinderGeometry(1, 1.5, 20, 8);
+  const trunkMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8b4513, // 闌ｶ濶ｲ
+    roughness: 0.9,
+    metalness: 0.0,
+  });
+  const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+  trunk.position.y = 10;
+  trunk.castShadow = true;
+  trunk.receiveShadow = true;
+  tree.add(trunk);
+
+  // 闡会ｼ亥・骭仙ｽ｢・・ 隍・焚螻､縺ｧ陦ｨ迴ｾ
+  const leavesLayers = 4;
+  const leavesColor = 0x004400; // 豼・＞邱・
+  for (let i = 0; i < leavesLayers; i++) {
+    const radiusFactor = 1 - i * 0.2;
+    const heightFactor = 1 - i * 0.15;
+
+    const leavesGeometry = new THREE.ConeGeometry(
+      8 * radiusFactor,
+      15 * heightFactor,
+      8
+    );
+    const leavesMaterial = new THREE.MeshStandardMaterial({
+      color: leavesColor,
+      roughness: 0.8,
+      metalness: 0.0,
+    });
+
+    const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+    leaves.position.y = 20 + i * 8;
+    leaves.castShadow = true;
+    leaves.receiveShadow = true;
+    tree.add(leaves);
+  }
+
+  return tree;
+}
+
+/**
+ * 蠎・痩讓ｹ繧剃ｽ懈・縺吶ｋ
+ */
+function createOakTree() {
+  const tree = new THREE.Group();
+
+  // 蟷ｹ
+  const trunkGeometry = new THREE.CylinderGeometry(1.2, 2, 16, 8);
+  const trunkMaterial = new THREE.MeshStandardMaterial({
+    color: 0x926239, // 闌ｶ濶ｲ
+    roughness: 0.8,
+    metalness: 0.0,
+  });
+  const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+  trunk.position.y = 8;
+  trunk.castShadow = true;
+  trunk.receiveShadow = true;
+  tree.add(trunk);
+
+  // 闡会ｼ育帥菴難ｼ・ 蟆代＠螟牙ｽ｢縺輔○縺ｦ荳崎ｦ丞援縺ｫ
+  const leavesGeometry = new THREE.SphereGeometry(10, 10, 10);
+
+  // 鬆らせ繧偵Λ繝ｳ繝繝縺ｫ蜍輔°縺励※荳崎ｦ丞援縺ｪ蠖｢迥ｶ縺ｫ
+  for (let i = 0; i < leavesGeometry.attributes.position.count; i++) {
+    const x = leavesGeometry.attributes.position.getX(i);
+    const y = leavesGeometry.attributes.position.getY(i);
+    const z = leavesGeometry.attributes.position.getZ(i);
+
+    const noise = Math.sin(x * 0.5) * Math.cos(z * 0.5) * 1.5;
+
+    leavesGeometry.attributes.position.setX(i, x + (Math.random() - 0.5) * 2);
+    leavesGeometry.attributes.position.setY(i, y + noise);
+    leavesGeometry.attributes.position.setZ(i, z + (Math.random() - 0.5) * 2);
+  }
+
+  leavesGeometry.computeVertexNormals();
+
+  const leavesMaterial = new THREE.MeshStandardMaterial({
+    color: 0x2d5e21, // 邱・    roughness: 0.8,
+    metalness: 0.0,
+  });
+
+  const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+  leaves.position.y = 20;
+  leaves.castShadow = true;
+  leaves.receiveShadow = true;
+  tree.add(leaves);
+
+  return tree;
+}
+
+/**
+ * 菴取惠繧剃ｽ懈・縺吶ｋ
+ */
+function createBushTree() {
+  const bush = new THREE.Group();
+
+  // 蟷ｹ・育洒縺・ｼ・  const trunkGeometry = new THREE.CylinderGeometry(0.5, 0.8, 4, 6);
+  const trunkMaterial = new THREE.MeshStandardMaterial({
+    color: 0x8b4513,
+    roughness: 0.9,
+    metalness: 0.0,
+  });
+
+  const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+  trunk.position.y = 2;
+  trunk.castShadow = true;
+  trunk.receiveShadow = true;
+  bush.add(trunk);
+
+  // 闡会ｼ郁､・焚縺ｮ逅・ｽ難ｼ・  const foliageCount = 3 + Math.floor(Math.random() * 3);
+
+  for (let i = 0; i < foliageCount; i++) {
+    const foliageSize = 2 + Math.random() * 3;
+    const foliageGeometry = new THREE.SphereGeometry(foliageSize, 8, 8);
+    const foliageMaterial = new THREE.MeshStandardMaterial({
+      color: 0x466b2f, // 證励ａ縺ｮ邱・      roughness: 0.8,
+      metalness: 0.0,
+    });
+
+    const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial);
+
+    // 繝ｩ繝ｳ繝繝縺ｪ菴咲ｽｮ縺ｫ驟咲ｽｮ・亥ｹｹ縺ｮ荳企Κ蜻ｨ霎ｺ・・    const angle = Math.random() * Math.PI * 2;
+    const radius = Math.random() * 2;
+    foliage.position.set(
+      Math.cos(angle) * radius,
+      4 + Math.random() * 3,
+      Math.sin(angle) * radius
+    );
+
+    foliage.castShadow = true;
+    foliage.receiveShadow = true;
+    bush.add(foliage);
+  }
+
+  return bush;
+}
+
+/**
+ * 蜻ｨ蝗ｲ縺ｮ繝輔ぉ繝ｳ繧ｹ繧剃ｽ懈・縺吶ｋ・亥渕遉弱↑縺励∝ｻｺ迚ｩ縺ｨ蟷ｲ貂峨＠縺ｪ縺・ヰ繝ｼ繧ｸ繝ｧ繝ｳ・・ */
+function createPerimeterFence() {
+  // 繝輔ぉ繝ｳ繧ｹ縺ｮ險ｭ螳・  const fenceSize = 320; // 繝輔ぉ繝ｳ繧ｹ縺ｮ蜊雁ｾ・ｼ医・繝ｩ繝・ヨ繝輔か繝ｼ繝縺ｨ縺ｮ蟷ｲ貂峨ｒ驕ｿ縺代ｋ縺溘ａ螟ｧ縺阪ａ縺ｫ・・  const fenceHeight = 8; // 繝輔ぉ繝ｳ繧ｹ縺ｮ鬮倥＆
+
+  // 繝輔ぉ繝ｳ繧ｹ縺ｮ譚占ｳｪ
+  const fenceMaterials = {
+    post: new THREE.MeshStandardMaterial({
+      color: 0x444444,
+      roughness: 0.6,
+      metalness: 0.4,
+    }),
+    wire: new THREE.MeshStandardMaterial({
+      color: 0x888888,
+      roughness: 0.4,
+      metalness: 0.6,
+      side: THREE.DoubleSide // 荳｡髱｢陦ｨ遉ｺ縺ｫ險ｭ螳・    }),
+  };
+
+  // 繝輔ぉ繝ｳ繧ｹ縺ｮ譟ｱ繧帝・鄂ｮ
+  const postSpacing = 10; // 譟ｱ縺ｮ髢馴囈
+  const postGeometry = new THREE.CylinderGeometry(0.3, 0.3, fenceHeight, 8);
+
+  // 蝗幄ｧ貞ｽ｢縺ｮ繝輔ぉ繝ｳ繧ｹ繧剃ｽ懈・
+  for (let side = 0; side < 4; side++) {
+    const rotation = (side * Math.PI) / 2;
+    const direction = new THREE.Vector3(
+      Math.cos(rotation),
+      0,
+      Math.sin(rotation)
+    );
+
+    // 蜷・ｾｺ縺ｮ繝輔ぉ繝ｳ繧ｹ菴懈・
+    for (let i = -fenceSize + 5; i <= fenceSize - 5; i += postSpacing) {
+      const perpendicular = i;
+      const parallel = fenceSize;
+
+      // 蠎ｧ讓吝､画鋤
+      const x = perpendicular * direction.z + parallel * direction.x;
+      const z = perpendicular * direction.x - parallel * direction.z;
+
+      // 蜊怜・・域ｭ｣髢縺後≠繧九→縺薙ｍ・峨・繧ｲ繝ｼ繝磯Κ蛻・・譟ｱ繧偵せ繧ｭ繝・・
+      if (side === 0 && Math.abs(i) < 15) {
+        continue; // 繧ｲ繝ｼ繝医・蟷・・縺縺第浤繧定ｨｭ鄂ｮ縺励↑縺・      }
+
+      // 譟ｱ縺ｮ菴懈・
+      const post = new THREE.Mesh(postGeometry, fenceMaterials.post);
+      post.position.set(x, fenceHeight / 2, z);
+      post.castShadow = true;
+      post.receiveShadow = true;
+      scene.add(post);
+    }
+  }
+
+  // 驩・擅邯ｲ・医ヵ繧ｧ繝ｳ繧ｹ荳企Κ・・  const wireGeometry = new THREE.TorusGeometry(0.3, 0.1, 8, 16);
+  const wireMaterial = fenceMaterials.wire;
+
+  // 蝗幄ｾｺ縺ｫ縺昴ｌ縺槭ｌ驩・擅邯ｲ繧定ｨｭ鄂ｮ
+  for (let side = 0; side < 4; side++) {
+    const rotation = (side * Math.PI) / 2;
+    const direction = new THREE.Vector3(
+      Math.cos(rotation),
+      0,
+      Math.sin(rotation)
+    );
+
+    for (let i = -fenceSize + 6; i < fenceSize - 6; i += 4) {
+      // 蜊怜・・域ｭ｣髢縺後≠繧九→縺薙ｍ・峨・繧ｲ繝ｼ繝磯Κ蛻・・驩・擅邯ｲ繧偵せ繧ｭ繝・・
+      if (side === 0 && Math.abs(i) < 15) {
+        continue; // 繧ｲ繝ｼ繝医・蟷・・縺縺鷹延譚｡邯ｲ繧定ｨｭ鄂ｮ縺励↑縺・      }
+
+      const perpendicular = i;
+      const parallel = fenceSize;
+
+      // 蠎ｧ讓吝､画鋤
+      const x = perpendicular * direction.z + parallel * direction.x;
+      const z = perpendicular * direction.x - parallel * direction.z;
+
+      const wire = new THREE.Mesh(wireGeometry, wireMaterial);
+      wire.position.set(x, fenceHeight, z);
+      wire.rotation.x = Math.PI / 2;
+      wire.rotation.z = rotation;
+      wire.castShadow = true;
+      scene.add(wire);
+    }
+  }
+
+  // 逶｣隕悶き繝｡繝ｩ・医さ繝ｼ繝翫・縺斐→縺ｫ・・  const cameraPositions = [
+    { x: fenceSize - 5, z: fenceSize - 5 },
+    { x: fenceSize - 5, z: -fenceSize + 5 },
+    { x: -fenceSize + 5, z: fenceSize - 5 },
+    { x: -fenceSize + 5, z: -fenceSize + 5 },
+  ];
+
+  cameraPositions.forEach((pos) => {
+    createSecurityCamera(pos.x, pos.z);
+  });
+
+  // 豁｣髢・亥漉蛛ｴ・・  createMainGate(0, fenceSize);
+
+  console.log("繧ｻ繧ｭ繝･繝ｪ繝・ぅ繝輔ぉ繝ｳ繧ｹ菴懈・螳御ｺ・);
+}
+
+/**
+ * 逶｣隕悶き繝｡繝ｩ繧剃ｽ懈・縺吶ｋ
+ */
+function createSecurityCamera(x, z) {
+  const camera = new THREE.Group();
+
+  // 繧ｫ繝｡繝ｩ縺ｮ繝槭え繝ｳ繝茨ｼ域髪譟ｱ・・  const mountGeometry = new THREE.CylinderGeometry(0.5, 0.5, 10, 8);
+  const mountMaterial = new THREE.MeshStandardMaterial({
+    color: 0x555555,
+    roughness: 0.7,
+    metalness: 0.3,
+  });
+
+  const mount = new THREE.Mesh(mountGeometry, mountMaterial);
+  mount.position.y = 5;
+  mount.castShadow = true;
+  camera.add(mount);
+
+  // 繧ｫ繝｡繝ｩ繝倥ャ繝・  const headGeometry = new THREE.BoxGeometry(2, 1, 3);
+  const headMaterial = new THREE.MeshStandardMaterial({
+    color: 0x333333,
+    roughness: 0.5,
+    metalness: 0.5,
+  });
+
+  const head = new THREE.Mesh(headGeometry, headMaterial);
+  head.position.y = 10;
+  head.position.x = 1;
+  head.castShadow = true;
+  camera.add(head);
+
+  // 繝ｬ繝ｳ繧ｺ
+  const lensGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.5, 16);
+  const lensMaterial = new THREE.MeshStandardMaterial({
+    color: 0x000000,
+    roughness: 0.2,
+    metalness: 0.8,
+  });
+
+  const lens = new THREE.Mesh(lensGeometry, lensMaterial);
+  lens.rotation.z = Math.PI / 2;
+  lens.position.set(2.3, 10, 0);
+  camera.add(lens);
+
+  // 迥ｶ諷玖｡ｨ遉ｺLED
+  const ledGeometry = new THREE.SphereGeometry(0.2, 8, 8);
+  const ledMaterial = new THREE.MeshStandardMaterial({
+    color: 0xff0000,
+    emissive: 0xff0000,
+    emissiveIntensity: 1,
+  });
+
+  const led = new THREE.Mesh(ledGeometry, ledMaterial);
+  led.position.set(1, 10.6, 0);
+  camera.add(led);
+
+  // 繧ｫ繝｡繝ｩ繧帝・鄂ｮ縺励∽ｸｭ螟ｮ繧貞髄縺上ｈ縺・↓蝗櫁ｻ｢
+  camera.position.set(x, 0, z);
+  camera.lookAt(0, 10, 0);
+
+  scene.add(camera);
+  
+  // 繧ｫ繝｡繝ｩ繧ｪ繝悶ず繧ｧ繧ｯ繝医ｒ霑斐☆
+  return camera;
+}
+
+/**
+ * 豁｣髢繧剃ｽ懈・縺吶ｋ・亥漉蛛ｴ縺ｫ驟咲ｽｮ・・ */
+function createMainGate(x, z) {
+  const gate = new THREE.Group();
+
+  // 繧ｲ繝ｼ繝医・繝輔Ξ繝ｼ繝・医い繝ｼ繝・ｼ・  const frameCurve = new THREE.QuadraticBezierCurve3(
+    new THREE.Vector3(-10, 0, 0),
+    new THREE.Vector3(0, 15, 0),
+    new THREE.Vector3(10, 0, 0)
+  );
+
+  const framePoints = frameCurve.getPoints(20);
+  const frameGeometry = new THREE.BufferGeometry().setFromPoints(framePoints);
+  const frameMaterial = new THREE.LineBasicMaterial({
+    color: 0x0056b3,
+    linewidth: 3,
+  });
+
+  const frame = new THREE.Line(frameGeometry, frameMaterial);
+  gate.add(frame);
+
+  // 繧ｲ繝ｼ繝医・譟ｱ・井ｸ｡蛛ｴ・・  const pillarGeometry = new THREE.BoxGeometry(2, 12, 2);
+  const pillarMaterial = new THREE.MeshStandardMaterial({
+    color: 0x444444,
+    roughness: 0.7,
+    metalness: 0.3,
+  });
+
+  const leftPillar = new THREE.Mesh(pillarGeometry, pillarMaterial);
+  leftPillar.position.set(-10, 6, 0);
+  leftPillar.castShadow = true;
+  gate.add(leftPillar);
+
+  const rightPillar = new THREE.Mesh(pillarGeometry, pillarMaterial);
+  rightPillar.position.set(10, 6, 0);
+  rightPillar.castShadow = true;
+  gate.add(rightPillar);
+
+  // TerraGroup縺ｮ繝ｭ繧ｴ・医ご繝ｼ繝井ｸ企Κ・・  const logoGeometry = new THREE.BoxGeometry(1, 8, 0.5);
+  const logoMaterial = new THREE.MeshStandardMaterial({
+    color: 0x0056b3,
+    metalness: 0.8,
+    roughness: 0.2,
+    emissive: 0x0056b3,
+    emissiveIntensity: 0.5,
+  });
+
+  const logoVertical = new THREE.Mesh(logoGeometry, logoMaterial);
+  logoVertical.position.set(0, 10, 0);
+  gate.add(logoVertical);
+
+  const logoHorizontalGeometry = new THREE.BoxGeometry(6, 1, 0.5);
+  const logoHorizontal = new THREE.Mesh(logoHorizontalGeometry, logoMaterial);
+  logoHorizontal.position.set(0, 13, 0);
+  gate.add(logoHorizontal);
+
+  // 繧ｲ繝ｼ繝医ｒ驟咲ｽｮ
+  gate.position.set(x, 0, z);
+  // 蜷代″繧呈ｭ｣縺励￥險ｭ螳夲ｼ亥漉蛛ｴ縺ｫ驟咲ｽｮ縲∝､門・縺ｫ蜷代°縺｣縺ｦ髢九￥・・  gate.rotation.y = 0;
+
+  scene.add(gate);
+}
+
+/**
+ * 螟ｪ髯ｽ蜈峨ヱ繝阪Ν險ｭ蛯吶ｒ菴懈・縺吶ｋ
+ */
+function createSolarPanels() {
+  // 螟ｪ髯ｽ蜈峨ヱ繝阪Ν險ｭ蛯吶・繧ｰ繝ｫ繝ｼ繝・  const solarPanelGroup = new THREE.Group();
+  scene.add(solarPanelGroup);
+  
+  // 螟ｪ髯ｽ蜈峨ヱ繝阪Ν縺ｮ繝槭ユ繝ｪ繧｢繝ｫ
+  const panelMaterials = {
+    frame: new THREE.MeshStandardMaterial({
+      color: 0x777777,
+      roughness: 0.5,
+      metalness: 0.8
+    }),
+    panel: new THREE.MeshStandardMaterial({
+      color: 0x2244aa,
+      roughness: 0.1,
+      metalness: 0.9,
+      envMapIntensity: 1.0
+    }),
+    support: new THREE.MeshStandardMaterial({
+      color: 0x555555,
+      roughness: 0.8,
+      metalness: 0.2
+    })
+  };
+  
+  // 螟ｪ髯ｽ蜈峨ヱ繝阪Ν繧ｨ繝ｪ繧｢縺ｮ驟咲ｽｮ蝣ｴ謇・亥ｻｺ迚ｩ縺ｮ隘ｿ蛛ｴ・・  const panelAreaPosition = { x: -200, z: -100 };
+  
+  // 縺翫♀繧医◎6x5縺ｮ螟ｪ髯ｽ蜈峨ヱ繝阪Ν繧｢繝ｬ繧､繧剃ｽ懈・
+  const panelRows = 5;
+  const panelCols = 6;
+  const panelSpacing = 12;
+  
+  // 荳ｭ螟ｮ繧定ｨｭ鄂ｮ繝昴う繝ｳ繝医→縺励◆繧ｪ繝輔そ繝・ヨ繧定ｨ育ｮ・  const totalWidth = panelCols * panelSpacing;
+  const totalDepth = panelRows * panelSpacing;
+  const startX = panelAreaPosition.x - totalWidth / 2;
+  const startZ = panelAreaPosition.z - totalDepth / 2;
+  
+  // 螟ｪ髯ｽ蜈峨ヱ繝阪Ν縺ｮ繝吶・繧ｹ繧剃ｽ懈・・医さ繝ｳ繧ｯ繝ｪ繝ｼ繝亥渕遉趣ｼ・  const baseGeometry = new THREE.BoxGeometry(totalWidth + 15, 0.5, totalDepth + 15);
+  const baseMaterial = new THREE.MeshStandardMaterial({
+    color: 0x999999,
+    roughness: 0.9,
+    metalness: 0.1
+  });
+  
+  const base = new THREE.Mesh(baseGeometry, baseMaterial);
+  base.position.set(panelAreaPosition.x, 0.25, panelAreaPosition.z);
+  base.receiveShadow = true;
+  solarPanelGroup.add(base);
+
+  // 螟ｪ髯ｽ蜈峨ヱ繝阪Ν縺ｮ繧｢繝ｬ繧､繧剃ｽ懈・
+  for (let row = 0; row < panelRows; row++) {
+    for (let col = 0; col < panelCols; col++) {
+      // 繝代ロ繝ｫ繧剃ｽ懈・
+      const panel = createSingleSolarPanel();
+      
+      // 菴咲ｽｮ險ｭ螳・      const x = startX + col * panelSpacing;
+      const z = startZ + row * panelSpacing;
+      panel.position.set(x, 0, z);
+      
+      // 繧ｰ繝ｫ繝ｼ繝励↓霑ｽ蜉
+      solarPanelGroup.add(panel);
+    }
+  }
+  
+  // 逶｣隕悶き繝｡繝ｩ繧帝・鄂ｮ・郁ｨｭ蛯吶・繧ｻ繧ｭ繝･繝ｪ繝・ぅ・・  createSecurityCamera(panelAreaPosition.x + totalWidth / 2, panelAreaPosition.z - totalDepth / 2 - 5);
+  
+  // 隱ｬ譏守恚譚ｿ繧定ｿｽ蜉
+  const signGeometry = new THREE.BoxGeometry(8, 4, 0.2);
+  const signMaterial = new THREE.MeshStandardMaterial({
+    color: 0x0056b3,
+    roughness: 0.5,
+    metalness: 0.5
+  });
+  
+  const sign = new THREE.Mesh(signGeometry, signMaterial);
+  sign.position.set(panelAreaPosition.x - totalWidth / 2 - 5, 2, panelAreaPosition.z);
+  sign.rotation.y = Math.PI / 2;
+  solarPanelGroup.add(sign);
+  
+  console.log("螟ｪ髯ｽ蜈峨ヱ繝阪Ν險ｭ蛯吩ｽ懈・螳御ｺ・);
+}
+
+/**
+ * 蛟句挨縺ｮ螟ｪ髯ｽ蜈峨ヱ繝阪Ν繧剃ｽ懈・
+ */
+function createSingleSolarPanel() {
+  const panelGroup = new THREE.Group();
+  
+  // 繝代ロ繝ｫ譛ｬ菴薙し繧､繧ｺ
+  const panelWidth = 8;
+  const panelHeight = 0.2;
+  const panelDepth = 6;
+  
+  // 繝代ロ繝ｫ縺ｮ繧ｵ繝昴・繝域ｧ倥・蟾ｮ縺玲｣・  const supportGeometry = new THREE.BoxGeometry(0.4, 2.5, 0.4);
+  const supportMaterial = new THREE.MeshStandardMaterial({
+    color: 0x777777,
+    roughness: 0.6,
+    metalness: 0.4
+  });
+  
+  // 蜑榊・縺ｮ繧ｵ繝昴・繝・  const frontSupport = new THREE.Mesh(supportGeometry, supportMaterial);
+  frontSupport.position.set(-panelWidth/2 + 1, 1.25, -panelDepth/2 + 0.5);
+  frontSupport.castShadow = true;
+  panelGroup.add(frontSupport);
+  
+  const frontSupport2 = new THREE.Mesh(supportGeometry, supportMaterial);
+  frontSupport2.position.set(panelWidth/2 - 1, 1.25, -panelDepth/2 + 0.5);
+  frontSupport2.castShadow = true;
+  panelGroup.add(frontSupport2);
+  
+  // 蠕悟・縺ｮ繧ｵ繝昴・繝茨ｼ磯ｫ倥ａ・・  const backSupport = new THREE.Mesh(supportGeometry, supportMaterial);
+  backSupport.position.set(-panelWidth/2 + 1, 2.25, panelDepth/2 - 0.5);
+  backSupport.castShadow = true;
+  panelGroup.add(backSupport);
+  
+  const backSupport2 = new THREE.Mesh(supportGeometry, supportMaterial);
+  backSupport2.position.set(panelWidth/2 - 1, 2.25, panelDepth/2 - 0.5);
+  backSupport2.castShadow = true;
+  panelGroup.add(backSupport2);
+  
+  // 繝代ロ繝ｫ繝輔Ξ繝ｼ繝
+  const frameGeometry = new THREE.BoxGeometry(panelWidth, panelHeight, panelDepth);
+  const frameMaterial = new THREE.MeshStandardMaterial({
+    color: 0x555555,
+    roughness: 0.8,
+    metalness: 0.5
+  });
+  
+  const frame = new THREE.Mesh(frameGeometry, frameMaterial);
+  frame.castShadow = true;
+  frame.position.set(0, 3.5, 0);
+  // 譁懊ａ縺ｫ險ｭ鄂ｮ・亥､ｪ髯ｽ縺ｫ蜷代￠繧具ｼ・  frame.rotation.x = -Math.PI * 0.15;
+  panelGroup.add(frame);
+  
+  // 繝代ロ繝ｫ譛ｬ菴難ｼ郁凶蟷ｲ蟆上＆縺擾ｼ・  const panelGeometry = new THREE.BoxGeometry(panelWidth - 0.4, 0.1, panelDepth - 0.4);
+  const panelMaterial = new THREE.MeshStandardMaterial({
+    color: 0x2244aa,
+    roughness: 0.4,   // 邊励＆繧剃ｸ翫￡縺ｦ縲∝・豐｡繧呈椛縺医ｋ
+    metalness: 0.6,   // 驥大ｱ樊─繧呈柑豸・    envMapIntensity: 0.5  // 迺ｰ蠅・・繝・・縺ｮ蠑ｷ蠎ｦ繧剃ｸ九￡繧・  });
+  
+  const panelSurface = new THREE.Mesh(panelGeometry, panelMaterial);
+  panelSurface.position.set(0, 0.1, 0);  // 蟆代＠豬ｮ縺九○縺ｦZ繝輔ぃ繧､繝・ぅ繝ｳ繧ｰ繧帝∩縺代ｋ
+  panelSurface.castShadow = true;
+  frame.add(panelSurface);  // 繝輔Ξ繝ｼ繝縺ｮ蟄占ｦ∫ｴ縺ｫ縺吶ｋ
+  
+  // 蜷・そ繝ｫ繧定｡ｨ縺呎ｼ蟄先ｨ｡讒倥ｒ菴懈・
+  const gridSize = 4;
+  const cellWidth = (panelWidth - 0.6) / gridSize;
+  const cellHeight = (panelDepth - 0.6) / gridSize;
+  
+  const gridGeometry = new THREE.BufferGeometry();
+  const gridMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 1, opacity: 0.7, transparent: true });
+  
+  // 譬ｼ蟄舌・邱壹ｒ菴懈・
+  const points = [];
+  for (let i = 0; i <= gridSize; i++) {
+    const xPos = -panelWidth/2 + 0.3 + i * cellWidth;
+    points.push(
+      new THREE.Vector3(xPos, 0.07, -panelDepth/2 + 0.3),  // 鬮倥＆繧貞ｰ代＠荳翫￡繧・      new THREE.Vector3(xPos, 0.07, panelDepth/2 - 0.3)    // 鬮倥＆繧貞ｰ代＠荳翫￡繧・    );
+  }
+  
+  for (let i = 0; i <= gridSize; i++) {
+    const zPos = -panelDepth/2 + 0.3 + i * cellHeight;
+    points.push(
+      new THREE.Vector3(-panelWidth/2 + 0.3, 0.07, zPos),  // 鬮倥＆繧貞ｰ代＠荳翫￡繧・      new THREE.Vector3(panelWidth/2 - 0.3, 0.07, zPos)    // 鬮倥＆繧貞ｰ代＠荳翫￡繧・    );
+  }
+  
+  gridGeometry.setFromPoints(points);
+  const grid = new THREE.LineSegments(gridGeometry, gridMaterial);
+  panelSurface.add(grid);
+  
+  return panelGroup;
+}
+
+/**
+ * 螟ｧ隕乗ｨ｡豬・ｰｴ譁ｽ險ｭ繧剃ｽ懈・縺吶ｋ髢｢謨ｰ
+ * 蜿り・判蜒上↓蝓ｺ縺･縺・◆蜀・ｽ｢繧ｿ繝ｳ繧ｯ鄒､縺ｨ蜃ｦ逅・命險ｭ繧貞・迴ｾ
+ */
+function createLargeWaterTreatmentFacility() {
+  console.log("螟ｧ隕乗ｨ｡豬・ｰｴ譁ｽ險ｭ縺ｮ菴懈・髢句ｧ・);
+  
+  // 豬・ｰｴ譁ｽ險ｭ縺ｮ繧ｰ繝ｫ繝ｼ繝・  const waterFacilityGroup = new THREE.Group();
+  scene.add(waterFacilityGroup);
+  
+  // 譁ｽ險ｭ縺ｮ驟咲ｽｮ菴咲ｽｮ・亥圏譚ｱ蛛ｴ・・- 謨ｷ蝨ｰ蜀・↓蜿弱∪繧九ｈ縺・ｪｿ謨ｴ
+  const facilityPosition = { x: 150, z: -150 };
+  
+  // 豬・ｰｴ譁ｽ險ｭ縺ｮ繝吶・繧ｹ・医さ繝ｳ繧ｯ繝ｪ繝ｼ繝亥渕遉趣ｼ・- 邏ｰ髟ｷ縺乗聞蝨ｰ蜀・↓蜿弱ａ繧・  const baseGeometry = new THREE.BoxGeometry(220, 1, 180);
+  const baseMaterial = new THREE.MeshStandardMaterial({
+    color: 0xaaaaaa,
+    roughness: 0.9,
+    metalness: 0.1
+  });
+  
+  const base = new THREE.Mesh(baseGeometry, baseMaterial);
+  base.position.set(facilityPosition.x, 0.5, facilityPosition.z);
+  base.receiveShadow = true;
+  waterFacilityGroup.add(base);
+
+  // ============================================================
+  // 蜀・ｽ｢豬・ｰｴ繧ｿ繝ｳ繧ｯ・亥盾閠・判蜒上↓蝓ｺ縺･縺冗ｷ題牡縺ｮ繧ゅ・縺ｨ逋ｽ濶ｲ縺ｮ繧ゅ・・・  // ============================================================
+  
+  // 螟ｧ蝙句・蠖｢繧ｿ繝ｳ繧ｯ・育ｷ題牡縺ｮ繧ｿ繝ｳ繧ｯ・・  const createGreenTank = (x, z, radius = 30, depth = 5) => {
+    const tankGroup = new THREE.Group();
+    
+    // 螟門・縺ｮ螢・    const wallGeometry = new THREE.CylinderGeometry(radius, radius, depth, 32);
+    const wallMaterial = new THREE.MeshStandardMaterial({
+      color: 0x004400,  // 豺ｱ邱題牡
+      roughness: 0.6,
+      metalness: 0.3
+    });
+    
+    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+    wall.position.y = depth / 2;
+    wall.castShadow = true;
+    wall.receiveShadow = true;
+    tankGroup.add(wall);
+    
+    // 蜀・・縺ｮ豌ｴ・域ｰｴ髱｢縺ｮ陦ｨ迴ｾ・・- Z-fighting隗｣豸育畑縺ｫ菴咲ｽｮ縺ｨ繧ｵ繧､繧ｺ繧定ｪｿ謨ｴ
+    const waterGeometry = new THREE.CylinderGeometry(radius - 1.5, radius - 1.5, 0.1, 32);
+    const waterMaterial = new THREE.MeshStandardMaterial({
+      color: 0x004488,  // 豼・＞髱定牡
+      roughness: 0.1,
+      metalness: 0.3,
+      transparent: true,
+      opacity: 0.8
+    });
+    
+    const water = new THREE.Mesh(waterGeometry, waterMaterial);
+    water.position.y = depth + 0.1;  // Z-fighting隗｣豸医・縺溘ａ菴咲ｽｮ繧剃ｸ翫￡繧・    tankGroup.add(water);
+    
+    // 荳ｭ螟ｮ縺ｮ蝗櫁ｻ｢讖滓ｧ具ｼ域ｵ・ｰｴ蝎ｨ・・    const centerPillarGeometry = new THREE.CylinderGeometry(2, 2, depth + 4, 16);
+    const centerPillarMaterial = new THREE.MeshStandardMaterial({
+      color: 0x555555,
+      roughness: 0.6,
+      metalness: 0.7
+    });
+    
+    const centerPillar = new THREE.Mesh(centerPillarGeometry, centerPillarMaterial);
+    centerPillar.position.y = depth / 2 + 2;
+    centerPillar.castShadow = true;
+    tankGroup.add(centerPillar);
+    
+    // 蝗櫁ｻ｢繧｢繝ｼ繝
+    const armGeometry = new THREE.BoxGeometry(radius * 1.8, 0.8, 0.8);
+    const armMaterial = new THREE.MeshStandardMaterial({
+      color: 0x333333,
+      roughness: 0.7,
+      metalness: 0.5
+    });
+    
+    const arm = new THREE.Mesh(armGeometry, armMaterial);
+    arm.position.y = depth + 3;
+    arm.castShadow = true;
+    tankGroup.add(arm);
+    
+    // 繧ｿ繝ｳ繧ｯ縺ｮ菴咲ｽｮ繧定ｨｭ螳・    tankGroup.position.set(x, 0, z);
+    waterFacilityGroup.add(tankGroup);
+    
+    return tankGroup;
+  };
+  
+  // 逋ｽ縺・・蠖｢繧ｿ繝ｳ繧ｯ・域ｵ・ｰｴ蜃ｦ逅・ｧｽ・・  const createWhiteTank = (x, z, radius = 25, depth = 5) => {
+    const tankGroup = new THREE.Group();
+    
+    // 螟門・縺ｮ螢・    const wallGeometry = new THREE.CylinderGeometry(radius, radius, depth, 32);
+    const wallMaterial = new THREE.MeshStandardMaterial({
+      color: 0xdddddd,  // 逋ｽ濶ｲ
+      roughness: 0.3,
+      metalness: 0.5
+    });
+    
+    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+    wall.position.y = depth / 2;
+    wall.castShadow = true;
+    wall.receiveShadow = true;
+    tankGroup.add(wall);
+    
+    // 蜀・・縺ｮ豌ｴ・域ｰｴ髱｢縺ｮ陦ｨ迴ｾ・・- Z-fighting隗｣豸育畑縺ｫ菴咲ｽｮ縺ｨ繧ｵ繧､繧ｺ繧定ｪｿ謨ｴ
+    const waterGeometry = new THREE.CylinderGeometry(radius - 1.5, radius - 1.5, 0.1, 32);
+    const waterMaterial = new THREE.MeshStandardMaterial({
+      color: 0x88ccff,  // 譏弱ｋ縺・搨濶ｲ・亥・逅・ｾ後・縺阪ｌ縺・↑豌ｴ・・      roughness: 0.1,
+      metalness: 0.2,
+      transparent: true,
+      opacity: 0.7
+    });
+    
+    const water = new THREE.Mesh(waterGeometry, waterMaterial);
+    water.position.y = depth - 0.01;  // 蠎暮擇縺ｨ縺ｮ髢馴囈繧貞ｺ・￡繧・    tankGroup.add(water);
+    
+    // 繧ｿ繝ｳ繧ｯ縺ｮ菴咲ｽｮ繧定ｨｭ螳・    tankGroup.position.set(x, 0, z);
+    waterFacilityGroup.add(tankGroup);
+    
+    return tankGroup;
+  };
+  
+  // 蜿り・判蜒上↓蝓ｺ縺･縺・※蜀・ｽ｢繧ｿ繝ｳ繧ｯ繧帝・鄂ｮ
+  // 邱題牡繧ｿ繝ｳ繧ｯ・域怙蛻昴・豬・喧讒ｽ・・- 驟咲ｽｮ菴咲ｽｮ繧定ｪｿ謨ｴ
+  createGreenTank(facilityPosition.x - 75, facilityPosition.z - 60, 25, 5);
+  createGreenTank(facilityPosition.x, facilityPosition.z - 60, 25, 5);
+  createGreenTank(facilityPosition.x + 75, facilityPosition.z - 60, 25, 5);
+  
+  // 逋ｽ濶ｲ繧ｿ繝ｳ繧ｯ・域怙邨よｵ・喧讒ｽ・・- 驟咲ｽｮ菴咲ｽｮ繧定ｪｿ謨ｴ
+  createWhiteTank(facilityPosition.x - 75, facilityPosition.z + 40, 22, 5);
+  createWhiteTank(facilityPosition.x, facilityPosition.z + 40, 22, 5);
+  createWhiteTank(facilityPosition.x + 75, facilityPosition.z + 40, 22, 5);
+  
+  // ============================================================
+  // 蜃ｦ逅・命險ｭ繝ｻ蛻ｶ蠕｡蟒ｺ迚ｩ
+  // ============================================================
+  
+  // 荳ｻ蛻ｶ蠕｡譽・- 菴咲ｽｮ隱ｿ謨ｴ
+  const controlBuildingGeometry = new THREE.BoxGeometry(35, 15, 25);
+  const controlBuildingMaterial = new THREE.MeshStandardMaterial({
+    color: 0x0056b3,  // TerraGroup縺ｮ繝悶Ν繝ｼ
+    roughness: 0.7,
+    metalness: 0.3
+  });
+  
+  const controlBuilding = new THREE.Mesh(controlBuildingGeometry, controlBuildingMaterial);
+  controlBuilding.position.set(facilityPosition.x + 75, 7.5, facilityPosition.z - 20);
+  controlBuilding.castShadow = true;
+  controlBuilding.receiveShadow = true;
+  waterFacilityGroup.add(controlBuilding);
+  
+  // 蛻ｶ蠕｡譽溘↓遯薙ｒ霑ｽ蜉
+  addWindowsToBox(controlBuilding, 4, 2);
+  
+  // 蟆上＆縺ｪ讖滓｢ｰ螳､ - 菴咲ｽｮ隱ｿ謨ｴ
+  const pumpHouseGeometry = new THREE.BoxGeometry(15, 8, 12);
+  const pumpHouseMaterial = new THREE.MeshStandardMaterial({
+    color: 0xcccccc,
+    roughness: 0.8,
+    metalness: 0.2
+  });
+  
+  const pumpHouse = new THREE.Mesh(pumpHouseGeometry, pumpHouseMaterial);
+  pumpHouse.position.set(facilityPosition.x + 60, 4, facilityPosition.z - 80);
+  pumpHouse.castShadow = true;
+  pumpHouse.receiveShadow = true;
+  waterFacilityGroup.add(pumpHouse);
+  
+  // ============================================================
+  // 謗･邯壹ヱ繧､繝励→繧､繝ｳ繝輔Λ
+  // ============================================================
+  
+  // 繝代う繝励・繝槭ユ繝ｪ繧｢繝ｫ
+  const pipeMaterial = new THREE.MeshStandardMaterial({
+    color: 0x777777,
+    roughness: 0.4,
+    metalness: 0.7
+  });
+  
+  // 邱代ち繝ｳ繧ｯ蜷悟｣ｫ繧呈磁邯壹☆繧九ヱ繧､繝・- 菴咲ｽｮ隱ｿ謨ｴ
+  createPipe(
+    facilityPosition.x - 75, 2.5, facilityPosition.z - 60,
+    facilityPosition.x, 2.5, facilityPosition.z - 60,
+    1.2, pipeMaterial
+  );
+  
+  createPipe(
+    facilityPosition.x, 2.5, facilityPosition.z - 60,
+    facilityPosition.x + 75, 2.5, facilityPosition.z - 60,
+    1.2, pipeMaterial
+  );
+  
+  // 逋ｽ繧ｿ繝ｳ繧ｯ蜷悟｣ｫ繧呈磁邯壹☆繧九ヱ繧､繝・- 菴咲ｽｮ隱ｿ謨ｴ
+  createPipe(
+    facilityPosition.x - 75, 2.5, facilityPosition.z + 40,
+    facilityPosition.x, 2.5, facilityPosition.z + 40,
+    1.2, pipeMaterial
+  );
+  
+  createPipe(
+    facilityPosition.x, 2.5, facilityPosition.z + 40,
+    facilityPosition.x + 75, 2.5, facilityPosition.z + 40,
+    1.2, pipeMaterial
+  );
+  
+  // 邱代ち繝ｳ繧ｯ縺九ｉ逋ｽ繧ｿ繝ｳ繧ｯ縺ｸ縺ｮ謗･邯壹ヱ繧､繝・- 菴咲ｽｮ隱ｿ謨ｴ
+  createPipe(
+    facilityPosition.x - 75, 2.5, facilityPosition.z - 60,
+    facilityPosition.x - 75, 2.5, facilityPosition.z + 40,
+    1.2, pipeMaterial
+  );
+  
+  createPipe(
+    facilityPosition.x, 2.5, facilityPosition.z - 60,
+    facilityPosition.x, 2.5, facilityPosition.z + 40,
+    1.2, pipeMaterial
+  );
+  
+  createPipe(
+    facilityPosition.x + 75, 2.5, facilityPosition.z - 60,
+    facilityPosition.x + 75, 2.5, facilityPosition.z + 40,
+    1.2, pipeMaterial
+  );
+  
+  // 蛻ｶ蠕｡譽溘→蜃ｦ逅・ち繝ｳ繧ｯ繧呈磁邯壹☆繧九ヱ繧､繝・- 菴咲ｽｮ隱ｿ謨ｴ
+  createPipe(
+    facilityPosition.x + 75, 2.5, facilityPosition.z - 60,
+    facilityPosition.x + 75, 2.5, facilityPosition.z - 20,
+    1.2, pipeMaterial
+  );
+  
+  // ============================================================
+  // 陬・｣ｾ隕∫ｴ・医・繝ｳ繝医√ヰ繝ｫ繝悶∵｢ｯ蟄舌↑縺ｩ・・  // ============================================================
+  
+  // 繧ｿ繝ｳ繧ｯ髢薙・蛻ｶ蠕｡繝舌Ν繝悶ｒ霑ｽ蜉 - 菴咲ｽｮ隱ｿ謨ｴ
+  addValve(facilityPosition.x - 37.5, 2.5, facilityPosition.z - 60);
+  addValve(facilityPosition.x + 37.5, 2.5, facilityPosition.z - 60);
+  addValve(facilityPosition.x - 37.5, 2.5, facilityPosition.z + 40);
+  addValve(facilityPosition.x + 37.5, 2.5, facilityPosition.z + 40);
+  
+  // 蜷・ち繝ｳ繧ｯ縺ｸ縺ｮ繧｢繧ｯ繧ｻ繧ｹ譴ｯ蟄・- 霑ｽ蜉譁ｹ豕輔ｒ菫ｮ豁｣
+  const ladders = [];
+  ladders.push(addLadder(facilityPosition.x - 75, facilityPosition.z - 85, 5, 0));
+  ladders.push(addLadder(facilityPosition.x, facilityPosition.z - 85, 5, 0));
+  ladders.push(addLadder(facilityPosition.x + 75, facilityPosition.z - 85, 5, 0));
+  ladders.push(addLadder(facilityPosition.x - 75, facilityPosition.z + 15, 5, Math.PI));
+  ladders.push(addLadder(facilityPosition.x, facilityPosition.z + 15, 5, Math.PI));
+  ladders.push(addLadder(facilityPosition.x + 75, facilityPosition.z + 15, 5, Math.PI));
+  
+  // 譴ｯ蟄舌ｒ繧ｷ繝ｼ繝ｳ縺ｫ霑ｽ蜉
+  ladders.forEach(ladder => waterFacilityGroup.add(ladder));
+  
+  // 蛻ｶ蠕｡譽溘・螻倶ｸ願ｨｭ蛯呻ｼ医・繝ｳ繝医ヱ繧､繝励→繧｢繝ｳ繝・リ・・- 霑ｽ蜉譁ｹ豕輔ｒ菫ｮ豁｣
+  const roofEquip = addRoofEquipment(facilityPosition.x + 75, 15, facilityPosition.z - 20);
+  waterFacilityGroup.add(roofEquip);
+  
+  // ============================================================
+  // 蜻ｨ蝗ｲ縺ｮ繝輔ぉ繝ｳ繧ｹ縺ｨ繧ｻ繧ｭ繝･繝ｪ繝・ぅ隕∫ｴ
+  // ============================================================
+  
+  // 豬・ｰｴ譁ｽ險ｭ縺ｮ蜻ｨ蝗ｲ縺ｫ繝輔ぉ繝ｳ繧ｹ繧定ｨｭ鄂ｮ - 繧ｵ繧､繧ｺ隱ｿ謨ｴ
+  const fence = createFacilityFence(facilityPosition.x, facilityPosition.z, 210, 170);
+  waterFacilityGroup.add(fence.posts);
+  waterFacilityGroup.add(fence.fences);
+  
+  // 繧ｻ繧ｭ繝･繝ｪ繝・ぅ繧ｫ繝｡繝ｩ繧定ｨｭ鄂ｮ - 謨ｷ蝨ｰ蜀・↓蜿弱∪繧九ｈ縺・ｽ咲ｽｮ隱ｿ謨ｴ
+  const camera1 = createSecurityCamera(
+    facilityPosition.x - 90, 
+    facilityPosition.z - 80
+  );
+  camera1.lookAt(facilityPosition.x, 10, facilityPosition.z);
+  
+  const camera2 = createSecurityCamera(
+    facilityPosition.x + 90, 
+    facilityPosition.z + 80
+  );
+  camera2.lookAt(facilityPosition.x, 10, facilityPosition.z);
+  
+  // 譁ｽ險ｭ蜷阪・逵区攸 - 謨ｷ蝨ｰ蜀・↓蜿弱∪繧九ｈ縺・ｽ咲ｽｮ隱ｿ謨ｴ
+  const signGeometry = new THREE.BoxGeometry(25, 5, 0.5);
+  const signMaterial = new THREE.MeshStandardMaterial({
+    color: 0x0056b3,
+    roughness: 0.5,
+    metalness: 0.3
+  });
+  
+  const sign = new THREE.Mesh(signGeometry, signMaterial);
+  sign.position.set(facilityPosition.x, 3, facilityPosition.z + 80);
+  sign.castShadow = true;
+  waterFacilityGroup.add(sign);
+  
+  // TerraGroup 縺ｮ繝ｭ繧ｴ鬚ｨ繝・じ繧､繝ｳ
+  const logoGeometry = new THREE.BoxGeometry(8, 3, 0.6);
+  const logoMaterial = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    roughness: 0.4,
+    metalness: 0.6,
+    emissive: 0xffffff,
+    emissiveIntensity: 0.2
+  });
+  
+  const logo = new THREE.Mesh(logoGeometry, logoMaterial);
+  logo.position.z = 0.1;
+  sign.add(logo);
+  
+  console.log("螟ｧ隕乗ｨ｡豬・ｰｴ譁ｽ險ｭ縺ｮ菴懈・螳御ｺ・);
+  return waterFacilityGroup;
+}
+
+/**
+ * 2轤ｹ髢薙ｒ謗･邯壹☆繧九ヱ繧､繝励ｒ菴懈・
+ */
+function createPipe(x1, y1, z1, x2, y2, z2, radius, material) {
+  // 2轤ｹ髢薙・霍晞屬縺ｨ荳ｭ髢鍋せ繧定ｨ育ｮ・  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const dz = z2 - z1;
+  
+  const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+  const midX = (x1 + x2) / 2;
+  const midY = (y1 + y2) / 2;
+  const midZ = (z1 + z2) / 2;
+  
+  // 繝代う繝励・繧ｸ繧ｪ繝｡繝医Μ・亥・譟ｱ・・  const pipeGeometry = new THREE.CylinderGeometry(radius, radius, distance, 8);
+  const pipe = new THREE.Mesh(pipeGeometry, material);
+  
+  // 繝代う繝励ｒ2轤ｹ髢薙↓驟咲ｽｮ
+  pipe.position.set(midX, midY, midZ);
+  
+  // 繝代う繝励ｒ2轤ｹ髢薙ｒ邨舌・譁ｹ蜷代↓蝗櫁ｻ｢
+  pipe.lookAt(x2, y2, z2);
+  pipe.rotateX(Math.PI / 2);
+  
+  pipe.castShadow = true;
+  scene.add(pipe);
+  
+  return pipe;
+}
+
+/**
+ * 繝舌Ν繝悶ｒ霑ｽ蜉
+ */
+function addValve(x, y, z) {
+  const valveGroup = new THREE.Group();
+  valveGroup.position.set(x, y, z);
+  
+  // 繝舌Ν繝匁悽菴・  const valveBodyGeometry = new THREE.CylinderGeometry(2, 2, 3, 16);
+  const valveBodyMaterial = new THREE.MeshStandardMaterial({
+    color: 0x333333,
+    roughness: 0.3,
+    metalness: 0.8
+  });
+  
+  const valveBody = new THREE.Mesh(valveBodyGeometry, valveBodyMaterial);
+  valveBody.rotation.x = Math.PI / 2;
+  valveBody.castShadow = true;
+  valveGroup.add(valveBody);
+  
+  // 繝舌Ν繝悶・繝上Φ繝峨Ν
+  const handleGeometry = new THREE.TorusGeometry(1.5, 0.3, 8, 16);
+  const handleMaterial = new THREE.MeshStandardMaterial({
+    color: 0xff0000,
+    roughness: 0.6,
+    metalness: 0.4
+  });
+  
+  const handle = new THREE.Mesh(handleGeometry, handleMaterial);
+  handle.position.y = 2;
+  handle.castShadow = true;
+  valveGroup.add(handle);
+  
+  // 繝舌Ν繝悶・繧ｹ繝・Β
+  const stemGeometry = new THREE.CylinderGeometry(0.3, 0.3, 2, 8);
+  const stem = new THREE.Mesh(stemGeometry, valveBodyMaterial);
+  stem.position.y = 1;
+  stem.castShadow = true;
+  valveGroup.add(stem);
+  
+  scene.add(valveGroup);
+  return valveGroup;
+}
+
+/**
+ * 繧｢繧ｯ繧ｻ繧ｹ逕ｨ縺ｮ譴ｯ蟄舌ｒ霑ｽ蜉
+ */
+function addLadder(x, z, height, rotation = 0) {
+  const ladderGroup = new THREE.Group();
+  ladderGroup.position.set(x, 0, z);
+  ladderGroup.rotation.y = rotation;
+  
+  const ladderMaterial = new THREE.MeshStandardMaterial({
+    color: 0x777777,
+    roughness: 0.7,
+    metalness: 0.3
+  });
+  
+  // 譴ｯ蟄舌・蛛ｴ髱｢ - 菴咲ｽｮ隱ｿ謨ｴ
+  const sideGeometry = new THREE.BoxGeometry(0.3, height, 0.3);
+  
+  const leftSide = new THREE.Mesh(sideGeometry, ladderMaterial);
+  leftSide.position.set(-1, height / 2, 0);
+  leftSide.castShadow = true;
+  ladderGroup.add(leftSide);
+  
+  const rightSide = new THREE.Mesh(sideGeometry, ladderMaterial);
+  rightSide.position.set(1, height / 2, 0);
+  rightSide.castShadow = true;
+  ladderGroup.add(rightSide);
+  
+  // 譴ｯ蟄舌・谿ｵ - 豁｣縺励＞鬮倥＆縺ｫ驟咲ｽｮ
+  const stepCount = Math.floor(height / 0.5);
+  const stepGeometry = new THREE.BoxGeometry(2.3, 0.2, 0.3);
+  
+  for (let i = 0; i < stepCount; i++) {
+    const step = new THREE.Mesh(stepGeometry, ladderMaterial);
+    // 蟆乗焚轤ｹ莉･荳九・險育ｮ苓ｪ､蟾ｮ繧帝∩縺代ｋ縺溘ａ縺ｫ蛻・ｊ荳翫￡縺ｦ謨ｴ謨ｰ蛹・    const stepY = Math.floor((i * 0.5 + 0.3) * 10) / 10;
+    step.position.set(0, stepY, 0);
+    ladderGroup.add(step);
+  }
+  
+  // 譴ｯ蟄舌げ繝ｫ繝ｼ繝励ｒ逶ｴ謗･繧ｷ繝ｼ繝ｳ縺ｫ霑ｽ蜉縺帙★霑泌唆
+  return ladderGroup;
+}
+
+/**
+ * 蛻ｶ蠕｡譽溷ｱ倶ｸ翫・險ｭ蛯吶ｒ霑ｽ蜉
+ */
+function addRoofEquipment(x, y, z) {
+  const equipmentGroup = new THREE.Group();
+  equipmentGroup.position.set(x, y, z);
+  
+  // 謗呈ｰ励・繝ｳ繝・
+  const vent1Geometry = new THREE.CylinderGeometry(1, 1.5, 3, 8);
+  const ventMaterial = new THREE.MeshStandardMaterial({
+    color: 0x555555,
+    roughness: 0.6,
+    metalness: 0.4
+  });
+  
+  const vent1 = new THREE.Mesh(vent1Geometry, ventMaterial);
+  vent1.position.set(-10, 1.5, -5);
+  vent1.castShadow = true;
+  equipmentGroup.add(vent1);
+  
+  // 謗呈ｰ励・繝ｳ繝・
+  const vent2 = vent1.clone();
+  vent2.position.set(-10, 1.5, 5);
+  equipmentGroup.add(vent2);
+  
+  // 繧｢繝ｳ繝・リ
+  const antennaPoleGeometry = new THREE.CylinderGeometry(0.3, 0.3, 8, 8);
+  const antennaMaterial = new THREE.MeshStandardMaterial({
+    color: 0x333333,
+    roughness: 0.3,
+    metalness: 0.8
+  });
+  
+  const antennaPole = new THREE.Mesh(antennaPoleGeometry, antennaMaterial);
+  antennaPole.position.set(10, 4, 0);
+  antennaPole.castShadow = true;
+  equipmentGroup.add(antennaPole);
+  
+  // 繧｢繝ｳ繝・リ縺ｮ蜿嶺ｿ｡驛ｨ
+  const antennaTopGeometry = new THREE.CylinderGeometry(0.1, 2, 4, 3);
+  const antennaTop = new THREE.Mesh(antennaTopGeometry, antennaMaterial);
+  antennaTop.position.set(0, 4, 0);
+  antennaTop.rotation.x = Math.PI / 2;
+  antennaPole.add(antennaTop);
+  
+  // 蟆上＆縺・・繝・け繧ｹ・育ｩｺ隱ｿ繝ｦ繝九ャ繝医↑縺ｩ・・  const acUnitGeometry = new THREE.BoxGeometry(5, 2, 4);
+  const acUnitMaterial = new THREE.MeshStandardMaterial({
+    color: 0x999999,
+    roughness: 0.7,
+    metalness: 0.3
+  });
+  
+  const acUnit = new THREE.Mesh(acUnitGeometry, acUnitMaterial);
+  acUnit.position.set(0, 1, 0);
+  acUnit.castShadow = true;
+  equipmentGroup.add(acUnit);
+  
+  // 繝輔ぃ繝ｳ
+  const fanGeometry = new THREE.CylinderGeometry(1, 1, 0.5, 8);
+  const fanMaterial = new THREE.MeshStandardMaterial({
+    color: 0x333333,
+    roughness: 0.5,
+    metalness: 0.5
+  });
+  
+  const fan = new THREE.Mesh(fanGeometry, fanMaterial);
+  fan.position.set(0, 0.5, 0);
+  fan.rotation.x = Math.PI / 2;
+  acUnit.add(fan);
+  
+  // 鄒､縺ｮ縺ｿ霑泌唆縺吶ｋ
+  return equipmentGroup;
+}
+
+/**
+ * 豬・ｰｴ譁ｽ險ｭ繧剃ｽ懈・縺吶ｋ・医す繝ｳ繝励Ν縺ｪ繝舌・繧ｸ繝ｧ繝ｳ - 譁ｰ迚医↓鄂ｮ縺肴鋤縺医ｉ繧後∪縺呻ｼ・ */
+function createWaterTreatmentFacility() {
+  // 豬・ｰｴ譁ｽ險ｭ縺ｮ繧ｰ繝ｫ繝ｼ繝・  const waterFacilityGroup = new THREE.Group();
+  scene.add(waterFacilityGroup);
+  
+  // 驟咲ｽｮ菴咲ｽｮ・亥漉隘ｿ蛛ｴ・・  const facilityPosition = { x: 180, z: 150 };
+  
+  // 豬・ｰｴ譁ｽ險ｭ縺ｮ繝吶・繧ｹ・医さ繝ｳ繧ｯ繝ｪ繝ｼ繝亥渕遉趣ｼ・  const baseGeometry = new THREE.BoxGeometry(80, 1, 60);
+  const baseMaterial = new THREE.MeshStandardMaterial({
+    color: 0x999999,
+    roughness: 0.9,
+    metalness: 0.1
+  });
+  
+  const base = new THREE.Mesh(baseGeometry, baseMaterial);
+  base.position.set(facilityPosition.x, 0.5, facilityPosition.z);
+  base.receiveShadow = true;
+  waterFacilityGroup.add(base);
+  
+  // 荳ｻ隕∝ｻｺ迚ｩ・亥宛蠕｡譽抵ｼ・  const controlBuildingGeometry = new THREE.BoxGeometry(15, 10, 20);
+  const controlBuildingMaterial = new THREE.MeshStandardMaterial({
+    color: 0x0056b3,
+    roughness: 0.7,
+    metalness: 0.3
+  });
+  
+  const controlBuilding = new THREE.Mesh(controlBuildingGeometry, controlBuildingMaterial);
+  controlBuilding.position.set(facilityPosition.x - 25, 5, facilityPosition.z + 15);
+  controlBuilding.castShadow = true;
+  controlBuilding.receiveShadow = true;
+  waterFacilityGroup.add(controlBuilding);
+  
+  // 蛻ｶ蠕｡譽偵・遯・  addWindowsToBox(controlBuilding, 2, 2);
+  
+  // 豌ｴ繧ｿ繝ｳ繧ｯ・亥､ｧ・・  const largeTankGeometry = new THREE.CylinderGeometry(10, 10, 18, 16);
+  const tankMaterial = new THREE.MeshStandardMaterial({
+    color: 0xdddddd,
+    roughness: 0.3,
+    metalness: 0.8
+  });
+  
+  const largeTank = new THREE.Mesh(largeTankGeometry, tankMaterial);
+  largeTank.position.set(facilityPosition.x + 25, 9, facilityPosition.z);
+  largeTank.castShadow = true;
+  largeTank.receiveShadow = true;
+  waterFacilityGroup.add(largeTank);
+  
+  // 繧ｿ繝ｳ繧ｯ縺ｮ荳企Κ
+  const tankTopGeometry = new THREE.CylinderGeometry(11, 10, 2, 16);
+  const tankTop = new THREE.Mesh(tankTopGeometry, tankMaterial);
+  tankTop.position.set(facilityPosition.x + 25, 19, facilityPosition.z);
+  tankTop.castShadow = true;
+  waterFacilityGroup.add(tankTop);
+  
+  // 豌ｴ繧ｿ繝ｳ繧ｯ・亥ｰ擾ｼ峨ｒ荳ｦ縺ｹ繧・  const smallTankCount = 3;
+  const smallTankGeometry = new THREE.CylinderGeometry(4, 4, 10, 12);
+  
+  for (let i = 0; i < smallTankCount; i++) {
+    const smallTank = new THREE.Mesh(smallTankGeometry, tankMaterial);
+    smallTank.position.set(
+      facilityPosition.x - 5 + i * 15,
+      5,
+      facilityPosition.z - 15
+    );
+    smallTank.castShadow = true;
+    smallTank.receiveShadow = true;
+    waterFacilityGroup.add(smallTank);
+    
+    // 繧ｿ繝ｳ繧ｯ髢薙ｒ縺､縺ｪ縺舌ヱ繧､繝・    if (i < smallTankCount - 1) {
+      const pipeGeometry = new THREE.CylinderGeometry(0.8, 0.8, 15, 8);
+      const pipeMaterial = new THREE.MeshStandardMaterial({
+        color: 0x999999,
+        roughness: 0.4,
+        metalness: 0.6
+      });
+      
+      const pipe = new THREE.Mesh(pipeGeometry, pipeMaterial);
+      pipe.rotation.z = Math.PI / 2;  // 讓ｪ蜷代″縺ｫ
+      pipe.position.set(
+        facilityPosition.x - 5 + i * 15 + 7.5,
+        5,
+        facilityPosition.z - 15
+      );
+      pipe.castShadow = true;
+      waterFacilityGroup.add(pipe);
+    }
+  }
+  
+  // 螟ｧ縺阪↑繧ｿ繝ｳ繧ｯ縺ｨ蛻ｶ蠕｡譽偵ｒ縺､縺ｪ縺舌ヱ繧､繝・  const mainPipeGeometry = new THREE.CylinderGeometry(1, 1, 40, 8);
+  const mainPipeMaterial = new THREE.MeshStandardMaterial({
+    color: 0x999999,
+    roughness: 0.4,
+    metalness: 0.6
+  });
+  
+  const mainPipe = new THREE.Mesh(mainPipeGeometry, mainPipeMaterial);
+  mainPipe.rotation.z = Math.PI / 2;  // 讓ｪ蜷代″縺ｫ
+  mainPipe.position.set(facilityPosition.x, 8, facilityPosition.z);
+  mainPipe.castShadow = true;
+  waterFacilityGroup.add(mainPipe);
+  
+  // 螟ｧ縺阪↑繧ｿ繝ｳ繧ｯ縺ｨ蟆上＆縺ｪ繧ｿ繝ｳ繧ｯ繧偵▽縺ｪ縺千ｸｦ繝代う繝・  const verticalPipeGeometry = new THREE.CylinderGeometry(0.8, 0.8, 15, 8);
+  const verticalPipe = new THREE.Mesh(verticalPipeGeometry, mainPipeMaterial);
+  verticalPipe.position.set(facilityPosition.x + 15, 10, facilityPosition.z - 10);
+  verticalPipe.castShadow = true;
+  waterFacilityGroup.add(verticalPipe);
+  
+  // 驟咲ｮ｡繧偵▽縺ｪ縺舌さ繝阪け繧ｿ繝ｼ繝昴う繝ｳ繝茨ｼ亥ｰ代＠隧ｳ邏ｰ繧貞刈縺医ｋ・・  const connectorGeometry = new THREE.SphereGeometry(1.5, 12, 12);
+  const connectorMaterial = new THREE.MeshStandardMaterial({
+    color: 0x333333,
+    roughness: 0.4,
+    metalness: 0.8
+  });
+  
+  // 荳ｻ隕∵磁邯壹・繧､繝ｳ繝医↓繧ｳ繝阪け繧ｿ繝ｼ繧定ｿｽ蜉
+  const connectorPositions = [
+    { x: facilityPosition.x - 15, y: 8, z: facilityPosition.z },
+    { x: facilityPosition.x + 15, y: 8, z: facilityPosition.z },
+    { x: facilityPosition.x + 15, y: 10, z: facilityPosition.z - 10 },
+    { x: facilityPosition.x + 15, y: 5, z: facilityPosition.z - 15 }
+  ];
+  
+  connectorPositions.forEach(pos => {
+    const connector = new THREE.Mesh(connectorGeometry, connectorMaterial);
+    connector.position.set(pos.x, pos.y, pos.z);
+    waterFacilityGroup.add(connector);
+  });
+  
+  // 繝輔ぉ繝ｳ繧ｹ繧定ｿｽ蜉
+  createFacilityFence(facilityPosition.x, facilityPosition.z, 85, 65);
+  
+  // 隱ｬ譏守恚譚ｿ繧定ｿｽ蜉
+  const signGeometry = new THREE.BoxGeometry(10, 5, 0.2);
+  const signMaterial = new THREE.MeshStandardMaterial({
+    color: 0x0056b3,
+    roughness: 0.5,
+    metalness: 0.5
+  });
+  
+  const sign = new THREE.Mesh(signGeometry, signMaterial);
+  sign.position.set(facilityPosition.x, 2.5, facilityPosition.z + 35);
+  sign.rotation.y = Math.PI;  // 蜊怜・繧貞髄縺上ｈ縺・↓
+  waterFacilityGroup.add(sign);
+  
+  console.log("豬・ｰｴ譁ｽ險ｭ菴懈・螳御ｺ・);
+  return waterFacilityGroup;
+}
+
+/**
+ * 譁ｽ險ｭ逕ｨ縺ｮ蟆上＆縺ｪ繝輔ぉ繝ｳ繧ｹ繧剃ｽ懈・
+ */
+function createFacilityFence(centerX, centerZ, width, depth) {
+  const halfWidth = width / 2;
+  const halfDepth = depth / 2;
+  
+  // 繝輔ぉ繝ｳ繧ｹ縺ｮ譟ｱ縺ｮ繝槭ユ繝ｪ繧｢繝ｫ
+  const postMaterial = new THREE.MeshStandardMaterial({
+    color: 0x444444,
+    roughness: 0.6,
+    metalness: 0.4
+  });
+  
+  // 驥醍ｶｱ縺ｮ繝槭ユ繝ｪ繧｢繝ｫ - 荳｡髱｢陦ｨ遉ｺ縺ｫ菫ｮ豁｣
+  const wireMaterial = new THREE.MeshStandardMaterial({
+    color: 0x777777,
+    roughness: 0.4,
+    metalness: 0.6,
+    transparent: true,
+    opacity: 0.9,
+    side: THREE.DoubleSide  // 荳｡髱｢陦ｨ遉ｺ縺ｫ險ｭ螳・  });
+  
+  // 繝輔ぉ繝ｳ繧ｹ縺ｮ鬮倥＆縺ｨ譟ｱ縺ｮ髢馴囈
+  const fenceHeight = 3.5;  // 鬮倥＆繧剃ｽ弱ａ縺ｫ隱ｿ謨ｴ
+  const postSpacing = 10;
+  
+  // 譟ｱ縺ｮ繧ｸ繧ｪ繝｡繝医Μ
+  const postGeometry = new THREE.CylinderGeometry(0.2, 0.2, fenceHeight, 8);
+  
+  // 譟ｱ繧貞慍髱｢縺ｫ驟咲ｽｮ縺吶ｋ繧ｿ繝ｼ繧ｲ繝・ヨ繧ｰ繝ｫ繝ｼ繝・  const postsGroup = new THREE.Group();
+  scene.add(postsGroup);
+  
+  // 髟ｷ縺墓婿蜷代・譟ｱ繧剃ｽ懈・
+  for (let x = -halfWidth; x <= halfWidth; x += postSpacing) {
+    // 蛹怜・縺ｮ譟ｱ
+    const northPost = new THREE.Mesh(postGeometry, postMaterial);
+    northPost.position.set(centerX + x, fenceHeight/2, centerZ - halfDepth);
+    northPost.castShadow = true;
+    postsGroup.add(northPost);
+    
+    // 蜊怜・縺ｮ譟ｱ
+    const southPost = new THREE.Mesh(postGeometry, postMaterial);
+    southPost.position.set(centerX + x, fenceHeight/2, centerZ + halfDepth);
+    southPost.castShadow = true;
+    postsGroup.add(southPost);
+  }
+  
+  // 蟷・婿蜷代・譟ｱ繧剃ｽ懈・
+  for (let z = -halfDepth + postSpacing; z < halfDepth; z += postSpacing) {
+    // 隘ｿ蛛ｴ縺ｮ譟ｱ
+    const westPost = new THREE.Mesh(postGeometry, postMaterial);
+    westPost.position.set(centerX - halfWidth, fenceHeight/2, centerZ + z);
+    westPost.castShadow = true;
+    postsGroup.add(westPost);
+    
+    // 譚ｱ蛛ｴ縺ｮ譟ｱ
+    const eastPost = new THREE.Mesh(postGeometry, postMaterial);
+    eastPost.position.set(centerX + halfWidth, fenceHeight/2, centerZ + z);
+    eastPost.castShadow = true;
+    postsGroup.add(eastPost);
+  }
+  
+  // 驥醍ｶｱ驛ｨ蛻・・繧ｿ繝ｼ繧ｲ繝・ヨ繧ｰ繝ｫ繝ｼ繝・  const fencesGroup = new THREE.Group();
+  scene.add(fencesGroup);
+  
+  // 蛹怜・縺ｮ繝輔ぉ繝ｳ繧ｹ
+  const northFenceGeometry = new THREE.PlaneGeometry(width, fenceHeight);
+  const northFence = new THREE.Mesh(northFenceGeometry, wireMaterial);
+  northFence.position.set(centerX, fenceHeight/2, centerZ - halfDepth);
+  northFence.castShadow = true;
+  fencesGroup.add(northFence);
+  
+  // 蜊怜・縺ｮ繝輔ぉ繝ｳ繧ｹ
+  const southFenceGeometry = new THREE.PlaneGeometry(width, fenceHeight);
+  const southFence = new THREE.Mesh(southFenceGeometry, wireMaterial);
+  southFence.position.set(centerX, fenceHeight/2, centerZ + halfDepth);
+  southFence.rotation.y = Math.PI;
+  southFence.castShadow = true;
+  fencesGroup.add(southFence);
+  
+  // 譚ｱ蛛ｴ縺ｮ繝輔ぉ繝ｳ繧ｹ
+  const eastFenceGeometry = new THREE.PlaneGeometry(depth, fenceHeight);
+  const eastFence = new THREE.Mesh(eastFenceGeometry, wireMaterial);
+  eastFence.position.set(centerX + halfWidth, fenceHeight/2, centerZ);
+  eastFence.rotation.y = -Math.PI / 2;
+  eastFence.castShadow = true;
+  fencesGroup.add(eastFence);
+  
