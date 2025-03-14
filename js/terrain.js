@@ -32,7 +32,7 @@ function createEnvironment() {
  */
 function createTerrain() {
   // 大地のサイズを拡大（4000x4000）
-  const groundGeometry = new THREE.PlaneGeometry(4000, 4000, 100, 100);
+  const groundGeometry = new THREE.PlaneGeometry(6000, 6000, 120, 120);
 
   // 草地テクスチャの作成
   function getTerrainMaterial() {
@@ -57,7 +57,7 @@ function createTerrain() {
     const distFromCenter = Math.sqrt(x * x + z * z);
 
     // 中心付近は平坦に、周囲は起伏をつける
-    if (distFromCenter > 200) {
+    if (distFromCenter > 5000) {
       const noise = (Math.sin(x * 0.02) + Math.cos(z * 0.02)) * 5;
       const noise2 = Math.cos(x * 0.05) * Math.sin(z * 0.03) * 3;
       const height = noise + noise2;
@@ -70,7 +70,7 @@ function createTerrain() {
   groundGeometry.attributes.position.needsUpdate = true;
 
   // 施設の基礎部分（白いプラットフォーム）- Z-fightingを防ぐため少し上に配置
-  const platformSize = 380; // 大きめのプラットフォーム
+  const platformSize = 600; // より大きなプラットフォーム
   const platformGeometry = new THREE.BoxGeometry(platformSize, 1, platformSize);
   const platformMaterial = new THREE.MeshStandardMaterial({
     color: 0xf5f5f5,
@@ -86,14 +86,14 @@ function createTerrain() {
 
   // 周囲の山々（より自然な形状）をさらに遠くに配置
   const mountainPositions = [
-    { x: 1500, z: 500, scale: 1.8 },
-    { x: 1300, z: -800, scale: 1.4 },
-    { x: 600, z: 1600, scale: 1.6 },
-    { x: -1000, z: 1400, scale: 2.0 },
-    { x: -1600, z: 0, scale: 1.9 },
-    { x: -1200, z: -1200, scale: 1.5 },
-    { x: 0, z: -1600, scale: 1.7 },
-    { x: 1000, z: -1200, scale: 1.3 },
+    { x: 2500, z: 1000, scale: 1.8 },
+    { x: 2200, z: -1400, scale: 1.4 },
+    { x: 1200, z: 2600, scale: 1.6 },
+    { x: -2000, z: 2400, scale: 2.0 },
+    { x: -2600, z: 0, scale: 1.9 },
+    { x: -2200, z: -2200, scale: 1.5 },
+    { x: 0, z: -2600, scale: 1.7 },
+    { x: 1800, z: -2200, scale: 1.3 },
   ];
 
   mountainPositions.forEach((pos) => {
@@ -192,9 +192,9 @@ function createForest() {
   ];
 
   // 施設周辺に木々を配置（排除ゾーン外）
-  const treeCount = 600; // 木の総数を増加
-  const exclusionRadius = 220; // 建物周辺の木を置かない半径
-  const forestRadius = 2000; // 森林半径を拡大
+  const treeCount = 800; // 木の総数を増加
+  const exclusionRadius = 450; // 建物周辺の木を置かない半径
+  const forestRadius = 3000; // 森林半径を拡大
 
   // 木のグループ（同じ種類の木をバッチ処理するため）
   const treeGroups = treeTypes.map(() => new THREE.Group());
@@ -399,7 +399,7 @@ function createBushTree() {
  */
 function createPerimeterFence() {
   // フェンスの設定
-  const fenceSize = 200; // フェンスの半径（プラットフォームとの干渉を避けるため大きめに）
+  const fenceSize = 320; // フェンスの半径（プラットフォームとの干渉を避けるため大きめに）
   const fenceHeight = 8; // フェンスの高さ
 
   // フェンスの材質
