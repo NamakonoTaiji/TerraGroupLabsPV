@@ -419,6 +419,7 @@ function createPerimeterFence() {
       color: 0x888888,
       roughness: 0.4,
       metalness: 0.6,
+      side: THREE.DoubleSide // 両面表示に設定
     }),
   };
 
@@ -1105,23 +1106,30 @@ function createLargeWaterTreatmentFacility() {
   addValve(facilityPosition.x - 37.5, 2.5, facilityPosition.z + 40);
   addValve(facilityPosition.x + 37.5, 2.5, facilityPosition.z + 40);
   
-  // 各タンクへのアクセス梯子 - 位置調整
-  addLadder(facilityPosition.x - 75, facilityPosition.z - 85, 5, 0);
-  addLadder(facilityPosition.x, facilityPosition.z - 85, 5, 0);
-  addLadder(facilityPosition.x + 75, facilityPosition.z - 85, 5, 0);
-  addLadder(facilityPosition.x - 75, facilityPosition.z + 15, 5, Math.PI);
-  addLadder(facilityPosition.x, facilityPosition.z + 15, 5, Math.PI);
-  addLadder(facilityPosition.x + 75, facilityPosition.z + 15, 5, Math.PI);
+  // 各タンクへのアクセス梯子 - 追加方法を修正
+  const ladders = [];
+  ladders.push(addLadder(facilityPosition.x - 75, facilityPosition.z - 85, 5, 0));
+  ladders.push(addLadder(facilityPosition.x, facilityPosition.z - 85, 5, 0));
+  ladders.push(addLadder(facilityPosition.x + 75, facilityPosition.z - 85, 5, 0));
+  ladders.push(addLadder(facilityPosition.x - 75, facilityPosition.z + 15, 5, Math.PI));
+  ladders.push(addLadder(facilityPosition.x, facilityPosition.z + 15, 5, Math.PI));
+  ladders.push(addLadder(facilityPosition.x + 75, facilityPosition.z + 15, 5, Math.PI));
   
-  // 制御棟の屋上設備（ベントパイプとアンテナ） - 位置調整
-  addRoofEquipment(facilityPosition.x + 75, 15, facilityPosition.z - 20);
+  // 梯子をシーンに追加
+  ladders.forEach(ladder => waterFacilityGroup.add(ladder));
+  
+  // 制御棟の屋上設備（ベントパイプとアンテナ） - 追加方法を修正
+  const roofEquip = addRoofEquipment(facilityPosition.x + 75, 15, facilityPosition.z - 20);
+  waterFacilityGroup.add(roofEquip);
   
   // ============================================================
   // 周囲のフェンスとセキュリティ要素
   // ============================================================
   
   // 浄水施設の周囲にフェンスを設置 - サイズ調整
-  createFacilityFence(facilityPosition.x, facilityPosition.z, 210, 170);
+  const fence = createFacilityFence(facilityPosition.x, facilityPosition.z, 210, 170);
+  waterFacilityGroup.add(fence.posts);
+  waterFacilityGroup.add(fence.fences);
   
   // セキュリティカメラを設置 - 敷地内に収まるよう位置調整
   const camera1 = createSecurityCamera(
@@ -1256,28 +1264,32 @@ function addLadder(x, z, height, rotation = 0) {
     metalness: 0.3
   });
   
-  // 梯子の側面
+  // 梯子の側面 - 位置調整
   const sideGeometry = new THREE.BoxGeometry(0.3, height, 0.3);
   
   const leftSide = new THREE.Mesh(sideGeometry, ladderMaterial);
   leftSide.position.set(-1, height / 2, 0);
+  leftSide.castShadow = true;
   ladderGroup.add(leftSide);
   
   const rightSide = new THREE.Mesh(sideGeometry, ladderMaterial);
   rightSide.position.set(1, height / 2, 0);
+  rightSide.castShadow = true;
   ladderGroup.add(rightSide);
   
-  // 梯子の段
+  // 梯子の段 - 正しい高さに配置
   const stepCount = Math.floor(height / 0.5);
   const stepGeometry = new THREE.BoxGeometry(2.3, 0.2, 0.3);
   
   for (let i = 0; i < stepCount; i++) {
     const step = new THREE.Mesh(stepGeometry, ladderMaterial);
-    step.position.set(0, i * 0.5 + 0.3, 0);
+    // 小数点以下の計算誤差を避けるために切り上げて整数化
+    const stepY = Math.floor((i * 0.5 + 0.3) * 10) / 10;
+    step.position.set(0, stepY, 0);
     ladderGroup.add(step);
   }
   
-  scene.add(ladderGroup);
+  // 梯子グループを直接シーンに追加せず返却
   return ladderGroup;
 }
 
@@ -1352,7 +1364,7 @@ function addRoofEquipment(x, y, z) {
   fan.rotation.x = Math.PI / 2;
   acUnit.add(fan);
   
-  scene.add(equipmentGroup);
+  // 群のみ返却する
   return equipmentGroup;
 }
 
@@ -1531,21 +1543,26 @@ function createFacilityFence(centerX, centerZ, width, depth) {
     metalness: 0.4
   });
   
-  // 金綱のマテリアル
+  // 金綱のマテリアル - 両面表示に修正
   const wireMaterial = new THREE.MeshStandardMaterial({
     color: 0x777777,
     roughness: 0.4,
     metalness: 0.6,
     transparent: true,
-    opacity: 0.9
+    opacity: 0.9,
+    side: THREE.DoubleSide  // 両面表示に設定
   });
   
   // フェンスの高さと柱の間隔
-  const fenceHeight = 5;
-  const postSpacing = 8;
+  const fenceHeight = 3.5;  // 高さを低めに調整
+  const postSpacing = 10;
   
   // 柱のジオメトリ
   const postGeometry = new THREE.CylinderGeometry(0.2, 0.2, fenceHeight, 8);
+  
+  // 柱を地面に配置するターゲットグループ
+  const postsGroup = new THREE.Group();
+  scene.add(postsGroup);
   
   // 長さ方向の柱を作成
   for (let x = -halfWidth; x <= halfWidth; x += postSpacing) {
@@ -1553,13 +1570,13 @@ function createFacilityFence(centerX, centerZ, width, depth) {
     const northPost = new THREE.Mesh(postGeometry, postMaterial);
     northPost.position.set(centerX + x, fenceHeight/2, centerZ - halfDepth);
     northPost.castShadow = true;
-    scene.add(northPost);
+    postsGroup.add(northPost);
     
     // 南側の柱
     const southPost = new THREE.Mesh(postGeometry, postMaterial);
     southPost.position.set(centerX + x, fenceHeight/2, centerZ + halfDepth);
     southPost.castShadow = true;
-    scene.add(southPost);
+    postsGroup.add(southPost);
   }
   
   // 幅方向の柱を作成
@@ -1568,22 +1585,25 @@ function createFacilityFence(centerX, centerZ, width, depth) {
     const westPost = new THREE.Mesh(postGeometry, postMaterial);
     westPost.position.set(centerX - halfWidth, fenceHeight/2, centerZ + z);
     westPost.castShadow = true;
-    scene.add(westPost);
+    postsGroup.add(westPost);
     
     // 東側の柱
     const eastPost = new THREE.Mesh(postGeometry, postMaterial);
     eastPost.position.set(centerX + halfWidth, fenceHeight/2, centerZ + z);
     eastPost.castShadow = true;
-    scene.add(eastPost);
+    postsGroup.add(eastPost);
   }
   
-  // 金綱部分（単純化のために四角の平面で代用）
+  // 金綱部分のターゲットグループ
+  const fencesGroup = new THREE.Group();
+  scene.add(fencesGroup);
+  
   // 北側のフェンス
   const northFenceGeometry = new THREE.PlaneGeometry(width, fenceHeight);
   const northFence = new THREE.Mesh(northFenceGeometry, wireMaterial);
   northFence.position.set(centerX, fenceHeight/2, centerZ - halfDepth);
   northFence.castShadow = true;
-  scene.add(northFence);
+  fencesGroup.add(northFence);
   
   // 南側のフェンス
   const southFenceGeometry = new THREE.PlaneGeometry(width, fenceHeight);
@@ -1591,7 +1611,7 @@ function createFacilityFence(centerX, centerZ, width, depth) {
   southFence.position.set(centerX, fenceHeight/2, centerZ + halfDepth);
   southFence.rotation.y = Math.PI;
   southFence.castShadow = true;
-  scene.add(southFence);
+  fencesGroup.add(southFence);
   
   // 東側のフェンス
   const eastFenceGeometry = new THREE.PlaneGeometry(depth, fenceHeight);
@@ -1599,7 +1619,7 @@ function createFacilityFence(centerX, centerZ, width, depth) {
   eastFence.position.set(centerX + halfWidth, fenceHeight/2, centerZ);
   eastFence.rotation.y = -Math.PI / 2;
   eastFence.castShadow = true;
-  scene.add(eastFence);
+  fencesGroup.add(eastFence);
   
   // 西側のフェンス
   const westFenceGeometry = new THREE.PlaneGeometry(depth, fenceHeight);
@@ -1607,11 +1627,11 @@ function createFacilityFence(centerX, centerZ, width, depth) {
   westFence.position.set(centerX - halfWidth, fenceHeight/2, centerZ);
   westFence.rotation.y = Math.PI / 2;
   westFence.castShadow = true;
-  scene.add(westFence);
+  fencesGroup.add(westFence);
   
   // ゲートの作成（南側に配置）
   const gateWidth = 15;
-  const gateHeight = 4;
+  const gateHeight = 3;
   
   // ゲート柱（左右）
   const gatePostGeometry = new THREE.CylinderGeometry(0.3, 0.3, fenceHeight, 8);
@@ -1625,26 +1645,30 @@ function createFacilityFence(centerX, centerZ, width, depth) {
   const leftGatePost = new THREE.Mesh(gatePostGeometry, gatePostMaterial);
   leftGatePost.position.set(centerX - gateWidth/2, fenceHeight/2, centerZ + halfDepth);
   leftGatePost.castShadow = true;
-  scene.add(leftGatePost);
+  postsGroup.add(leftGatePost);
   
   // 右のゲート柱
   const rightGatePost = new THREE.Mesh(gatePostGeometry, gatePostMaterial);
   rightGatePost.position.set(centerX + gateWidth/2, fenceHeight/2, centerZ + halfDepth);
   rightGatePost.castShadow = true;
-  scene.add(rightGatePost);
+  postsGroup.add(rightGatePost);
   
   // ゲート自体
   const gateGeometry = new THREE.BoxGeometry(gateWidth, gateHeight, 0.1);
   const gateMaterial = new THREE.MeshStandardMaterial({
     color: 0x555555,
     roughness: 0.5,
-    metalness: 0.7
+    metalness: 0.7,
+    side: THREE.DoubleSide
   });
   
   const gate = new THREE.Mesh(gateGeometry, gateMaterial);
   gate.position.set(centerX, gateHeight/2, centerZ + halfDepth);
   gate.castShadow = true;
-  scene.add(gate);
+  fencesGroup.add(gate);
+  
+  // フェンスのグループを返す
+  return { posts: postsGroup, fences: fencesGroup };
 }
 
 /**
