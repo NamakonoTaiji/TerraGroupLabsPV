@@ -18,6 +18,12 @@ function createEnvironment() {
 
       // 柵を復活
       createPerimeterFence();
+      
+      // 太陽光パネルを追加
+      createSolarPanels();
+      
+      // 浄水施設を追加
+      createWaterTreatmentFacility();
 
       resolve();
     } catch (error) {
@@ -568,6 +574,9 @@ function createSecurityCamera(x, z) {
   camera.lookAt(0, 10, 0);
 
   scene.add(camera);
+  
+  // カメラオブジェクトを返す
+  return camera;
 }
 
 /**
@@ -636,4 +645,530 @@ function createMainGate(x, z) {
   gate.rotation.y = 0;
 
   scene.add(gate);
+}
+
+/**
+ * 太陽光パネル設備を作成する
+ */
+function createSolarPanels() {
+  // 太陽光パネル設備のグループ
+  const solarPanelGroup = new THREE.Group();
+  scene.add(solarPanelGroup);
+  
+  // 太陽光パネルのマテリアル
+  const panelMaterials = {
+    frame: new THREE.MeshStandardMaterial({
+      color: 0x777777,
+      roughness: 0.5,
+      metalness: 0.8
+    }),
+    panel: new THREE.MeshStandardMaterial({
+      color: 0x2244aa,
+      roughness: 0.1,
+      metalness: 0.9,
+      envMapIntensity: 1.0
+    }),
+    support: new THREE.MeshStandardMaterial({
+      color: 0x555555,
+      roughness: 0.8,
+      metalness: 0.2
+    })
+  };
+  
+  // 太陽光パネルエリアの配置場所（建物の西側）
+  const panelAreaPosition = { x: -200, z: -100 };
+  
+  // おおよそ6x5の太陽光パネルアレイを作成
+  const panelRows = 5;
+  const panelCols = 6;
+  const panelSpacing = 12;
+  
+  // 中央を設置ポイントとしたオフセットを計算
+  const totalWidth = panelCols * panelSpacing;
+  const totalDepth = panelRows * panelSpacing;
+  const startX = panelAreaPosition.x - totalWidth / 2;
+  const startZ = panelAreaPosition.z - totalDepth / 2;
+  
+  // 太陽光パネルのベースを作成（コンクリート基礎）
+  const baseGeometry = new THREE.BoxGeometry(totalWidth + 15, 0.5, totalDepth + 15);
+  const baseMaterial = new THREE.MeshStandardMaterial({
+    color: 0x999999,
+    roughness: 0.9,
+    metalness: 0.1
+  });
+  
+  const base = new THREE.Mesh(baseGeometry, baseMaterial);
+  base.position.set(panelAreaPosition.x, 0.25, panelAreaPosition.z);
+  base.receiveShadow = true;
+  solarPanelGroup.add(base);
+
+  // 太陽光パネルのアレイを作成
+  for (let row = 0; row < panelRows; row++) {
+    for (let col = 0; col < panelCols; col++) {
+      // パネルを作成
+      const panel = createSingleSolarPanel();
+      
+      // 位置設定
+      const x = startX + col * panelSpacing;
+      const z = startZ + row * panelSpacing;
+      panel.position.set(x, 0, z);
+      
+      // グループに追加
+      solarPanelGroup.add(panel);
+    }
+  }
+  
+  // 監視カメラを配置（設備のセキュリティ）
+  createSecurityCamera(panelAreaPosition.x + totalWidth / 2, panelAreaPosition.z - totalDepth / 2 - 5);
+  
+  // 説明看板を追加
+  const signGeometry = new THREE.BoxGeometry(8, 4, 0.2);
+  const signMaterial = new THREE.MeshStandardMaterial({
+    color: 0x0056b3,
+    roughness: 0.5,
+    metalness: 0.5
+  });
+  
+  const sign = new THREE.Mesh(signGeometry, signMaterial);
+  sign.position.set(panelAreaPosition.x - totalWidth / 2 - 5, 2, panelAreaPosition.z);
+  sign.rotation.y = Math.PI / 2;
+  solarPanelGroup.add(sign);
+  
+  console.log("太陽光パネル設備作成完了");
+}
+
+/**
+ * 個別の太陽光パネルを作成
+ */
+function createSingleSolarPanel() {
+  const panelGroup = new THREE.Group();
+  
+  // パネル本体サイズ
+  const panelWidth = 8;
+  const panelHeight = 0.2;
+  const panelDepth = 6;
+  
+  // パネルのサポート様の差し棒
+  const supportGeometry = new THREE.BoxGeometry(0.4, 2.5, 0.4);
+  const supportMaterial = new THREE.MeshStandardMaterial({
+    color: 0x777777,
+    roughness: 0.6,
+    metalness: 0.4
+  });
+  
+  // 前側のサポート
+  const frontSupport = new THREE.Mesh(supportGeometry, supportMaterial);
+  frontSupport.position.set(-panelWidth/2 + 1, 1.25, -panelDepth/2 + 0.5);
+  frontSupport.castShadow = true;
+  panelGroup.add(frontSupport);
+  
+  const frontSupport2 = new THREE.Mesh(supportGeometry, supportMaterial);
+  frontSupport2.position.set(panelWidth/2 - 1, 1.25, -panelDepth/2 + 0.5);
+  frontSupport2.castShadow = true;
+  panelGroup.add(frontSupport2);
+  
+  // 後側のサポート（高め）
+  const backSupport = new THREE.Mesh(supportGeometry, supportMaterial);
+  backSupport.position.set(-panelWidth/2 + 1, 2.25, panelDepth/2 - 0.5);
+  backSupport.castShadow = true;
+  panelGroup.add(backSupport);
+  
+  const backSupport2 = new THREE.Mesh(supportGeometry, supportMaterial);
+  backSupport2.position.set(panelWidth/2 - 1, 2.25, panelDepth/2 - 0.5);
+  backSupport2.castShadow = true;
+  panelGroup.add(backSupport2);
+  
+  // パネルフレーム
+  const frameGeometry = new THREE.BoxGeometry(panelWidth, panelHeight, panelDepth);
+  const frameMaterial = new THREE.MeshStandardMaterial({
+    color: 0x555555,
+    roughness: 0.8,
+    metalness: 0.5
+  });
+  
+  const frame = new THREE.Mesh(frameGeometry, frameMaterial);
+  frame.castShadow = true;
+  frame.position.set(0, 3.5, 0);
+  // 斜めに設置（太陽に向ける）
+  frame.rotation.x = -Math.PI * 0.15;
+  panelGroup.add(frame);
+  
+  // パネル本体（若干小さく）
+  const panelGeometry = new THREE.BoxGeometry(panelWidth - 0.4, 0.1, panelDepth - 0.4);
+  const panelMaterial = new THREE.MeshStandardMaterial({
+    color: 0x2244aa,
+    roughness: 0.4,   // 粗さを上げて、光没を抑える
+    metalness: 0.6,   // 金属感を抹消
+    envMapIntensity: 0.5  // 環境マップの強度を下げる
+  });
+  
+  const panelSurface = new THREE.Mesh(panelGeometry, panelMaterial);
+  panelSurface.position.set(0, 0.1, 0);  // 少し浮かせてZファイティングを避ける
+  panelSurface.castShadow = true;
+  frame.add(panelSurface);  // フレームの子要素にする
+  
+  // 各セルを表す格子模様を作成
+  const gridSize = 4;
+  const cellWidth = (panelWidth - 0.6) / gridSize;
+  const cellHeight = (panelDepth - 0.6) / gridSize;
+  
+  const gridGeometry = new THREE.BufferGeometry();
+  const gridMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 1, opacity: 0.7, transparent: true });
+  
+  // 格子の線を作成
+  const points = [];
+  for (let i = 0; i <= gridSize; i++) {
+    const xPos = -panelWidth/2 + 0.3 + i * cellWidth;
+    points.push(
+      new THREE.Vector3(xPos, 0.07, -panelDepth/2 + 0.3),  // 高さを少し上げる
+      new THREE.Vector3(xPos, 0.07, panelDepth/2 - 0.3)    // 高さを少し上げる
+    );
+  }
+  
+  for (let i = 0; i <= gridSize; i++) {
+    const zPos = -panelDepth/2 + 0.3 + i * cellHeight;
+    points.push(
+      new THREE.Vector3(-panelWidth/2 + 0.3, 0.07, zPos),  // 高さを少し上げる
+      new THREE.Vector3(panelWidth/2 - 0.3, 0.07, zPos)    // 高さを少し上げる
+    );
+  }
+  
+  gridGeometry.setFromPoints(points);
+  const grid = new THREE.LineSegments(gridGeometry, gridMaterial);
+  panelSurface.add(grid);
+  
+  return panelGroup;
+}
+
+/**
+ * 浄水施設を作成する
+ */
+function createWaterTreatmentFacility() {
+  // 浄水施設のグループ
+  const waterFacilityGroup = new THREE.Group();
+  scene.add(waterFacilityGroup);
+  
+  // 配置位置（南西側）
+  const facilityPosition = { x: 180, z: 150 };
+  
+  // 浄水施設のベース（コンクリート基礎）
+  const baseGeometry = new THREE.BoxGeometry(80, 1, 60);
+  const baseMaterial = new THREE.MeshStandardMaterial({
+    color: 0x999999,
+    roughness: 0.9,
+    metalness: 0.1
+  });
+  
+  const base = new THREE.Mesh(baseGeometry, baseMaterial);
+  base.position.set(facilityPosition.x, 0.5, facilityPosition.z);
+  base.receiveShadow = true;
+  waterFacilityGroup.add(base);
+  
+  // 主要建物（制御棒）
+  const controlBuildingGeometry = new THREE.BoxGeometry(15, 10, 20);
+  const controlBuildingMaterial = new THREE.MeshStandardMaterial({
+    color: 0x0056b3,
+    roughness: 0.7,
+    metalness: 0.3
+  });
+  
+  const controlBuilding = new THREE.Mesh(controlBuildingGeometry, controlBuildingMaterial);
+  controlBuilding.position.set(facilityPosition.x - 25, 5, facilityPosition.z + 15);
+  controlBuilding.castShadow = true;
+  controlBuilding.receiveShadow = true;
+  waterFacilityGroup.add(controlBuilding);
+  
+  // 制御棒の窓
+  addWindowsToBox(controlBuilding, 2, 2);
+  
+  // 水タンク（大）
+  const largeTankGeometry = new THREE.CylinderGeometry(10, 10, 18, 16);
+  const tankMaterial = new THREE.MeshStandardMaterial({
+    color: 0xdddddd,
+    roughness: 0.3,
+    metalness: 0.8
+  });
+  
+  const largeTank = new THREE.Mesh(largeTankGeometry, tankMaterial);
+  largeTank.position.set(facilityPosition.x + 25, 9, facilityPosition.z);
+  largeTank.castShadow = true;
+  largeTank.receiveShadow = true;
+  waterFacilityGroup.add(largeTank);
+  
+  // タンクの上部
+  const tankTopGeometry = new THREE.CylinderGeometry(11, 10, 2, 16);
+  const tankTop = new THREE.Mesh(tankTopGeometry, tankMaterial);
+  tankTop.position.set(facilityPosition.x + 25, 19, facilityPosition.z);
+  tankTop.castShadow = true;
+  waterFacilityGroup.add(tankTop);
+  
+  // 水タンク（小）を並べる
+  const smallTankCount = 3;
+  const smallTankGeometry = new THREE.CylinderGeometry(4, 4, 10, 12);
+  
+  for (let i = 0; i < smallTankCount; i++) {
+    const smallTank = new THREE.Mesh(smallTankGeometry, tankMaterial);
+    smallTank.position.set(
+      facilityPosition.x - 5 + i * 15,
+      5,
+      facilityPosition.z - 15
+    );
+    smallTank.castShadow = true;
+    smallTank.receiveShadow = true;
+    waterFacilityGroup.add(smallTank);
+    
+    // タンク間をつなぐパイプ
+    if (i < smallTankCount - 1) {
+      const pipeGeometry = new THREE.CylinderGeometry(0.8, 0.8, 15, 8);
+      const pipeMaterial = new THREE.MeshStandardMaterial({
+        color: 0x999999,
+        roughness: 0.4,
+        metalness: 0.6
+      });
+      
+      const pipe = new THREE.Mesh(pipeGeometry, pipeMaterial);
+      pipe.rotation.z = Math.PI / 2;  // 横向きに
+      pipe.position.set(
+        facilityPosition.x - 5 + i * 15 + 7.5,
+        5,
+        facilityPosition.z - 15
+      );
+      pipe.castShadow = true;
+      waterFacilityGroup.add(pipe);
+    }
+  }
+  
+  // 大きなタンクと制御棒をつなぐパイプ
+  const mainPipeGeometry = new THREE.CylinderGeometry(1, 1, 40, 8);
+  const mainPipeMaterial = new THREE.MeshStandardMaterial({
+    color: 0x999999,
+    roughness: 0.4,
+    metalness: 0.6
+  });
+  
+  const mainPipe = new THREE.Mesh(mainPipeGeometry, mainPipeMaterial);
+  mainPipe.rotation.z = Math.PI / 2;  // 横向きに
+  mainPipe.position.set(facilityPosition.x, 8, facilityPosition.z);
+  mainPipe.castShadow = true;
+  waterFacilityGroup.add(mainPipe);
+  
+  // 大きなタンクと小さなタンクをつなぐ縦パイプ
+  const verticalPipeGeometry = new THREE.CylinderGeometry(0.8, 0.8, 15, 8);
+  const verticalPipe = new THREE.Mesh(verticalPipeGeometry, mainPipeMaterial);
+  verticalPipe.position.set(facilityPosition.x + 15, 10, facilityPosition.z - 10);
+  verticalPipe.castShadow = true;
+  waterFacilityGroup.add(verticalPipe);
+  
+  // 配管をつなぐコネクターポイント（少し詳細を加える）
+  const connectorGeometry = new THREE.SphereGeometry(1.5, 12, 12);
+  const connectorMaterial = new THREE.MeshStandardMaterial({
+    color: 0x333333,
+    roughness: 0.4,
+    metalness: 0.8
+  });
+  
+  // 主要接続ポイントにコネクターを追加
+  const connectorPositions = [
+    { x: facilityPosition.x - 15, y: 8, z: facilityPosition.z },
+    { x: facilityPosition.x + 15, y: 8, z: facilityPosition.z },
+    { x: facilityPosition.x + 15, y: 10, z: facilityPosition.z - 10 },
+    { x: facilityPosition.x + 15, y: 5, z: facilityPosition.z - 15 }
+  ];
+  
+  connectorPositions.forEach(pos => {
+    const connector = new THREE.Mesh(connectorGeometry, connectorMaterial);
+    connector.position.set(pos.x, pos.y, pos.z);
+    waterFacilityGroup.add(connector);
+  });
+  
+  // フェンスを追加
+  createFacilityFence(facilityPosition.x, facilityPosition.z, 85, 65);
+  
+  // 説明看板を追加
+  const signGeometry = new THREE.BoxGeometry(10, 5, 0.2);
+  const signMaterial = new THREE.MeshStandardMaterial({
+    color: 0x0056b3,
+    roughness: 0.5,
+    metalness: 0.5
+  });
+  
+  const sign = new THREE.Mesh(signGeometry, signMaterial);
+  sign.position.set(facilityPosition.x, 2.5, facilityPosition.z + 35);
+  sign.rotation.y = Math.PI;  // 南側を向くように
+  waterFacilityGroup.add(sign);
+  
+  console.log("浄水施設作成完了");
+}
+
+/**
+ * 施設用の小さなフェンスを作成
+ */
+function createFacilityFence(centerX, centerZ, width, depth) {
+  const halfWidth = width / 2;
+  const halfDepth = depth / 2;
+  
+  // フェンスの柱のマテリアル
+  const postMaterial = new THREE.MeshStandardMaterial({
+    color: 0x444444,
+    roughness: 0.6,
+    metalness: 0.4
+  });
+  
+  // 金綱のマテリアル
+  const wireMaterial = new THREE.MeshStandardMaterial({
+    color: 0x777777,
+    roughness: 0.4,
+    metalness: 0.6,
+    transparent: true,
+    opacity: 0.9
+  });
+  
+  // フェンスの高さと柱の間隔
+  const fenceHeight = 5;
+  const postSpacing = 8;
+  
+  // 柱のジオメトリ
+  const postGeometry = new THREE.CylinderGeometry(0.2, 0.2, fenceHeight, 8);
+  
+  // 長さ方向の柱を作成
+  for (let x = -halfWidth; x <= halfWidth; x += postSpacing) {
+    // 北側の柱
+    const northPost = new THREE.Mesh(postGeometry, postMaterial);
+    northPost.position.set(centerX + x, fenceHeight/2, centerZ - halfDepth);
+    northPost.castShadow = true;
+    scene.add(northPost);
+    
+    // 南側の柱
+    const southPost = new THREE.Mesh(postGeometry, postMaterial);
+    southPost.position.set(centerX + x, fenceHeight/2, centerZ + halfDepth);
+    southPost.castShadow = true;
+    scene.add(southPost);
+  }
+  
+  // 幅方向の柱を作成
+  for (let z = -halfDepth + postSpacing; z < halfDepth; z += postSpacing) {
+    // 西側の柱
+    const westPost = new THREE.Mesh(postGeometry, postMaterial);
+    westPost.position.set(centerX - halfWidth, fenceHeight/2, centerZ + z);
+    westPost.castShadow = true;
+    scene.add(westPost);
+    
+    // 東側の柱
+    const eastPost = new THREE.Mesh(postGeometry, postMaterial);
+    eastPost.position.set(centerX + halfWidth, fenceHeight/2, centerZ + z);
+    eastPost.castShadow = true;
+    scene.add(eastPost);
+  }
+  
+  // 金綱部分（単純化のために四角の平面で代用）
+  // 北側のフェンス
+  const northFenceGeometry = new THREE.PlaneGeometry(width, fenceHeight);
+  const northFence = new THREE.Mesh(northFenceGeometry, wireMaterial);
+  northFence.position.set(centerX, fenceHeight/2, centerZ - halfDepth);
+  northFence.castShadow = true;
+  scene.add(northFence);
+  
+  // 南側のフェンス
+  const southFenceGeometry = new THREE.PlaneGeometry(width, fenceHeight);
+  const southFence = new THREE.Mesh(southFenceGeometry, wireMaterial);
+  southFence.position.set(centerX, fenceHeight/2, centerZ + halfDepth);
+  southFence.rotation.y = Math.PI;
+  southFence.castShadow = true;
+  scene.add(southFence);
+  
+  // 東側のフェンス
+  const eastFenceGeometry = new THREE.PlaneGeometry(depth, fenceHeight);
+  const eastFence = new THREE.Mesh(eastFenceGeometry, wireMaterial);
+  eastFence.position.set(centerX + halfWidth, fenceHeight/2, centerZ);
+  eastFence.rotation.y = -Math.PI / 2;
+  eastFence.castShadow = true;
+  scene.add(eastFence);
+  
+  // 西側のフェンス
+  const westFenceGeometry = new THREE.PlaneGeometry(depth, fenceHeight);
+  const westFence = new THREE.Mesh(westFenceGeometry, wireMaterial);
+  westFence.position.set(centerX - halfWidth, fenceHeight/2, centerZ);
+  westFence.rotation.y = Math.PI / 2;
+  westFence.castShadow = true;
+  scene.add(westFence);
+  
+  // ゲートの作成（南側に配置）
+  const gateWidth = 15;
+  const gateHeight = 4;
+  
+  // ゲート柱（左右）
+  const gatePostGeometry = new THREE.CylinderGeometry(0.3, 0.3, fenceHeight, 8);
+  const gatePostMaterial = new THREE.MeshStandardMaterial({
+    color: 0x333333,
+    roughness: 0.6,
+    metalness: 0.5
+  });
+  
+  // 左のゲート柱
+  const leftGatePost = new THREE.Mesh(gatePostGeometry, gatePostMaterial);
+  leftGatePost.position.set(centerX - gateWidth/2, fenceHeight/2, centerZ + halfDepth);
+  leftGatePost.castShadow = true;
+  scene.add(leftGatePost);
+  
+  // 右のゲート柱
+  const rightGatePost = new THREE.Mesh(gatePostGeometry, gatePostMaterial);
+  rightGatePost.position.set(centerX + gateWidth/2, fenceHeight/2, centerZ + halfDepth);
+  rightGatePost.castShadow = true;
+  scene.add(rightGatePost);
+  
+  // ゲート自体
+  const gateGeometry = new THREE.BoxGeometry(gateWidth, gateHeight, 0.1);
+  const gateMaterial = new THREE.MeshStandardMaterial({
+    color: 0x555555,
+    roughness: 0.5,
+    metalness: 0.7
+  });
+  
+  const gate = new THREE.Mesh(gateGeometry, gateMaterial);
+  gate.position.set(centerX, gateHeight/2, centerZ + halfDepth);
+  gate.castShadow = true;
+  scene.add(gate);
+}
+
+/**
+ * 箱型の建物に窓を追加するヘルパー関数
+ */
+function addWindowsToBox(boxMesh, windowsX, windowsY) {
+  const width = boxMesh.geometry.parameters.width;
+  const height = boxMesh.geometry.parameters.height;
+  const depth = boxMesh.geometry.parameters.depth;
+  
+  const windowWidth = width / (windowsX + 1) * 0.7;
+  const windowHeight = height / (windowsY + 2) * 0.7;
+  
+  const windowGeometry = new THREE.PlaneGeometry(windowWidth, windowHeight);
+  const windowMaterial = new THREE.MeshStandardMaterial({
+    color: 0x88ccff,
+    transparent: true,
+    opacity: 0.7,
+    metalness: 0.8,
+    roughness: 0.2,
+    side: THREE.DoubleSide
+  });
+  
+  // 建物の前面と背面に窓を追加
+  for (let y = 0; y < windowsY; y++) {
+    for (let x = 0; x < windowsX; x++) {
+      // X位置を計算
+      const xPos = -width/2 + width * (x + 1) / (windowsX + 1);
+      // Y位置を計算（上部から下に）
+      const yPos = height/2 - height * (y + 1) / (windowsY + 1);
+      
+      // 前面の窓
+      const frontWindow = new THREE.Mesh(windowGeometry, windowMaterial);
+      frontWindow.position.set(xPos, yPos, depth/2 + 0.01); // 少し浮かせる
+      boxMesh.add(frontWindow);
+      
+      // 背面の窓
+      const backWindow = new THREE.Mesh(windowGeometry, windowMaterial);
+      backWindow.position.set(xPos, yPos, -depth/2 - 0.01);
+      backWindow.rotation.y = Math.PI;
+      boxMesh.add(backWindow);
+    }
+  }
 }
