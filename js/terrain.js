@@ -363,6 +363,7 @@ function createBushTree() {
     roughness: 0.9,
     metalness: 0.0,
   });
+
   const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
   trunk.position.y = 2;
   trunk.castShadow = true;
@@ -893,7 +894,7 @@ function createLargeWaterTreatmentFacility() {
     // 内側の水（水面の表現） - Z-fighting解消用に位置とサイズを調整
     const waterGeometry = new THREE.CylinderGeometry(radius - 1.5, radius - 1.5, 0.1, 32);
     const waterMaterial = new THREE.MeshStandardMaterial({
-      color: 0x004488,  // 暗い青色
+      color: 0x004488,  // 濃い青色
       roughness: 0.1,
       metalness: 0.3,
       transparent: true,
@@ -901,7 +902,7 @@ function createLargeWaterTreatmentFacility() {
     });
     
     const water = new THREE.Mesh(waterGeometry, waterMaterial);
-    water.position.y = depth - 0.01;  // 底面との間隔を広げる
+    water.position.y = depth + 0.1;  // Z-fighting解消のため位置を上げる
     tankGroup.add(water);
     
     // 中央の回転機構（浄水器）
@@ -929,17 +930,6 @@ function createLargeWaterTreatmentFacility() {
     arm.position.y = depth + 3;
     arm.castShadow = true;
     tankGroup.add(arm);
-    
-    // スイーパー部品を追加
-    for (let i = 0; i < 5; i++) {
-      const offset = (radius * 1.6) / 10;
-      const sweeper = new THREE.Mesh(
-        new THREE.BoxGeometry(0.5, 3, 0.5),
-        armMaterial
-      );
-      sweeper.position.set(-radius * 0.8 + i * offset * 4, depth + 1.5, 0);
-      arm.add(sweeper);
-    }
     
     // タンクの位置を設定
     tankGroup.position.set(x, 0, z);
